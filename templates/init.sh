@@ -77,9 +77,47 @@ fi
 if [ -f "requirements.txt" ] || [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
   ok "Detected Python project"
   TEST_RUNNER_FOUND=true
+
+  # Determine if a virtual environment already exists, or where to create it
+  VENV_DIR=""
+  if [ -d ".venv" ]; then
+    VENV_DIR=".venv"
+  elif [ -d "venv" ]; then
+    VENV_DIR="venv"
+  fi
+
+  if [ -z "$VENV_DIR" ]; then
+    echo "Creating virtual environment (.venv)..."
+    python3 -m venv .venv || python3 -m venv --without-pip .venv || { fail "venv creation failed"; exit 1; }
+    VENV_DIR=".venv"
+  fi
+
+  # Activate virtual environment
+  source "$VENV_DIR/bin/activate"
+
+  # Ensure pip is available inside the venv
+  if ! command -v pip >/dev/null 2>&1; then
+    echo "Installing pip..."
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python || { fail "pip install failed"; exit 1; }
+  fi
+
+  # Only install dependencies if requirements.txt has changed or venv is brand new
+  if [ -f "requirements.txt" ]; then
+    if [ ! -f "$VENV_DIR/.pip_installed" ] || [ "requirements.txt" -nt "$VENV_DIR/.pip_installed" ]; then
+      echo "Installing/updating dependencies from requirements.txt..."
+      if pip install -r requirements.txt; then
+        touch "$VENV_DIR/.pip_installed"
+      else
+        fail "requirements install failed"
+        EXIT_CODE=1
+      fi
+    fi
+  fi
+
+  # Execute pytest or unittest with pythonpath set
   if command -v pytest > /dev/null 2>&1; then
     echo "Running 'pytest'..."
-    if pytest; then
+    if PYTHONPATH=. pytest; then
       ok "pytest passed"
     else
       fail "pytest failed"
@@ -95,7 +133,7 @@ if [ -f "requirements.txt" ] || [ -f "pyproject.toml" ] || [ -f "setup.py" ]; th
     fi
   else
     echo "Running 'python -m unittest discover'..."
-    if python -m unittest discover; then
+    if PYTHONPATH=. python -m unittest discover; then
       ok "unittest passed"
     else
       fail "unittest failed"
