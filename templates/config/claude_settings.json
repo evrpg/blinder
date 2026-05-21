@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./init.sh 2>&1 | tail -5",
+            "description": "After editing or writing files, run init.sh verification and show summary."
+          }
+        ]
+      }
+    ]
+  }
+}
