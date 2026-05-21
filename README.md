@@ -28,13 +28,13 @@ Running Blinder in a project directory scaffolds the following multi-agent harne
 │       ├── implementer.md             # Claude Implementer subagent prompt
 │       └── reviewer.md                # Claude Reviewer subagent prompt
 │
-├── .gemini/
+├── .agents/
 │   ├── settings.json                  # Antigravity CLI hook configurations
 │   └── agents/
-│       ├── leader.md                  # Antigravity Leader subagent prompt
-│       ├── spec_author.md             # Antigravity Spec Author subagent prompt
-│       ├── implementer.md             # Antigravity Implementer subagent prompt
-│       └── reviewer.md                # Antigravity Reviewer subagent prompt
+│       ├── leader/agent.json          # Antigravity Leader configuration & prompt
+│       ├── spec_author/agent.json     # Antigravity Spec Author configuration & prompt
+│       ├── implementer/agent.json     # Antigravity Implementer configuration & prompt
+│       └── reviewer/agent.json        # Antigravity Reviewer configuration & prompt
 │
 ├── harness/
 │   └── prompts/
@@ -236,7 +236,7 @@ All requirements must also follow the format `FR-XXXX` where `XXXX` is a 4-digit
 
 ## 🔍 Validation Hook: `init.sh`
 
-Every time the AI agent finishes executing a tool or command, native hooks in `.claude/settings.json` and `.gemini/settings.json` run the [init.sh](file:///home/evrpg/Documents/projects/blinder/templates/init.sh) validator script. This script:
+Every time the AI agent finishes executing a tool or command, native hooks in `.claude/settings.json` and `.agents/settings.json` run the [init.sh](file:///home/evrpg/Documents/projects/blinder/templates/init.sh) validator script. This script:
 1. Performs structural integrity checks to verify all expected Blinder files exist.
 2. Validates `feature_list.json` syntax and ensures at most one feature is `in_progress` at any time.
 3. Detects the project language stack (Node.js/TypeScript, Python, Rust, Go) and executes the appropriate test suite command. If tests fail, the harness prevents marking features as complete.

@@ -5,7 +5,7 @@
 ## Mandatory role: leader
 
 In this repository you always act as the `leader` subagent defined in
-`.gemini/agents/leader.md`. Your job is to **decompose and coordinate**,
+`.agents/agents/leader/agent.json`. Your job is to **decompose and coordinate**,
 never implement.
 
 ### Hard rules

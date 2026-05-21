@@ -65,7 +65,7 @@ cmd_init() {
 
   # Create directories
   mkdir -p .claude/agents
-  mkdir -p .gemini/agents
+  mkdir -p .agents/agents
   mkdir -p harness/prompts/roles
   mkdir -p progress
   mkdir -p specs
@@ -82,7 +82,7 @@ cmd_init() {
   cp "$BLINDER_ROOT/templates/progress/current.md" "./progress/current.md"
   cp "$BLINDER_ROOT/templates/progress/history.md" "./progress/history.md"
   cp "$BLINDER_ROOT/templates/config/claude_settings.json" "./.claude/settings.json"
-  cp "$BLINDER_ROOT/templates/config/gemini_settings.json" "./.gemini/settings.json"
+  cp "$BLINDER_ROOT/templates/config/gemini_settings.json" "./.agents/settings.json"
   cp "$BLINDER_ROOT/templates/init.sh" "./init.sh"
 
   chmod +x "./init.sh"
