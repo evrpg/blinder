@@ -39,7 +39,7 @@ Look at the status of the first non-`done` / non-`blocked` feature in
 1. Change the status to `in_progress` in `feature_list.json`.
 2. Launch **1 subagent `implementer`** with the path `specs/<name>/` as input.
 3. When the implementer finishes, launch **1 subagent `reviewer`**.
-4. If the reviewer approves → change status to `done`.
+4. If the reviewer approves → change status to `done`, and append the completed session to `progress/history.md`.
 5. If the reviewer rejects → re-launch the implementer with the review notes.
 
 ### Case C — status == `in_progress`
@@ -56,3 +56,4 @@ Report the blocking reason from `progress/current.md` and wait for human input.
 - Short, decision-only messages
 - Reference files by path, do not inline large content
 - Update `progress/current.md` after every significant action
+- Append the completed session to `progress/history.md` when closing a feature
