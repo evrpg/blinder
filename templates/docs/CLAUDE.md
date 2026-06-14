@@ -45,9 +45,29 @@ Then act on the first non-`done`/`deferred` feature whose deps are met:
 | `pending` | Run the **discussion** phase yourself (ask via `AskUserQuestion`, write `decisions.md`, set `discussed`), then **continue without stopping** to the `discussed` step below. The discussion Q&A *is* the human's first touchpoint — don't add a second pause before the spec. |
 | `discussed` | Dispatch **spec_author** → it sets `spec_ready`. Present the spec and **stop at the approval gate** (the one hard stop before code). |
 | `spec_ready` + human approved | Set `in_progress`; dispatch **implementer**. |
+| `spec_ready` + human requests changes | Do **not** implement. Amend per "Amending at the approval gate" below, then re-present and wait for approval again. |
 | `implemented` | Dispatch **reviewer**. Approved → `done` (it appends history). Rejected → re-dispatch **implementer** with notes. |
 | `in_progress` | Resume from `current.md`; re-dispatch the right subagent. |
 | `blocked` / `deferred` | Report the reason from `current.md`/`feature_list.json`; wait for the human. |
+
+### Amending at the approval gate
+
+If, at `spec_ready`, the human wants changes, route by depth — keep
+`decisions.md → requirements.md → tasks.md` consistent and traceable, and never
+hand the spec to the implementer until the human approves the revised version:
+
+- **Spec wording / a missing task / a requirement tweak** (the decisions still
+  hold) → re-dispatch **spec_author** to revise the spec files in place. Stay at
+  `spec_ready`; re-present.
+- **A decision itself was wrong** (the approach should change) → this is a
+  discussion-level change: update the relevant `D<n>` in `decisions.md` (re-run an
+  `AskUserQuestion` round if it opens new questions; you may set the feature back to
+  `discussed`), then dispatch **spec_author** to redraft from the amended contract.
+- **The human just wants to talk it through** → discuss in chat; change nothing
+  until they ask for an edit.
+
+The feature does not advance to `in_progress` until the human approves the current
+spec.
 
 ## Hard rules
 

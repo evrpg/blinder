@@ -193,18 +193,37 @@ cycles.
 1. **Start.** Tell the Leader *"work the next pending feature"* (or name an ID). It
    reads `current.md` + the feature entry.
 2. **Discussion.** The Leader asks you a few batched questions (each with a
-   recommended default). Answer them; it writes `decisions.md` and stops.
-3. **Spec.** Say *"spec it."* The Leader dispatches `spec_author`, which writes
-   `requirements.md`, `design.md`, `tasks.md`, then stops at `spec_ready`.
-4. **Approve.** Read the spec. Say **"approved"** (or request changes). The Leader
-   flips the feature to `in_progress`.
+   recommended default). Answer them; it writes `decisions.md` and **continues
+   automatically** to the spec — no extra "say spec" step.
+3. **Spec.** `spec_author` writes `requirements.md`, `design.md`, `tasks.md`, and the
+   Leader presents the spec, stopping at `spec_ready`.
+4. **Approve.** Read the spec. Say **"approved"** → the Leader flips it to
+   `in_progress`. Or ask for changes (see below).
 5. **Implement.** The `implementer` does red-green TDD task by task, then runs the
    full suite and sets `implemented`.
 6. **Review.** The `reviewer` checks every requirement has a test, adds edge-case
    tests, runs `init.sh --full`, and writes `review.md`. If approved → `done` and
    appended to `history.md`; if rejected → back to the implementer with notes.
 
-You can stop after any phase and resume later — state is on disk.
+So per feature there are **two human touchpoints**: the discussion Q&A and the spec
+approval. You can stop after any phase and resume later — state is on disk.
+
+### Changing a spec at the approval gate
+
+At `spec_ready`, don't say "approved" — just tell the Leader what you want, and it
+routes by depth (keeping `decisions.md → requirements → tasks` in sync). **Let the
+Leader make the edits** rather than hand-editing the spec files:
+
+- **Spec tweak** (a requirement is off, a task is missing) and the decisions still
+  hold → the Leader has `spec_author` revise the spec in place; it stays
+  `spec_ready` and re-presents.
+- **A decision was wrong** (the approach should change) → say e.g. *"revisit D2 —
+  make storage file-based."* The Leader amends `decisions.md` (re-asking questions
+  if needed), then `spec_author` redrafts from it.
+- **Just want to talk it through** → discuss in chat; nothing changes until you ask
+  for an edit.
+
+Nothing advances to implementation until you approve the current spec.
 
 ---
 
