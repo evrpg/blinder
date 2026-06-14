@@ -55,15 +55,14 @@ big-bang-planning failure mode — and a waste of tokens. Resist it.
      --acceptance "<a>, <b>" --epic "<epic>" --depends-on "FR-XXXX,FR-YYYY"
    ```
 
-   Use IDs returned by earlier `new` calls for later `--depends-on`.
-5. **Record the roadmap.** Update `blinder/roadmap.md`: under the epic, add a row
-   per feature (id, title, depends-on, one-line rationale). This is the
-   human-readable "why each feature exists". `feature_list.json` stays canonical;
-   roadmap is its narrative companion.
-6. Update `blinder/progress/current.md` with one line. Run `bash blinder/init.sh`
-   to confirm the backlog is valid (deps resolve, no cycles).
-7. **Stop.** Tell the human the plan is in `blinder/feature_list.json` /
-   `roadmap.md`, and that the loop can start on the first feature
+   Use IDs returned by earlier `new` calls for later `--depends-on`. Give each a
+   clear `--description` — it's the one-liner shown on the roadmap board.
+5. Update `blinder/progress/current.md` with one line. Run `bash blinder/init.sh`
+   to confirm the backlog is valid (deps resolve, no cycles). You do **not** hand-write
+   `blinder/roadmap.md` — it's a board auto-regenerated from `feature_list.json` by
+   each `new` (run `bash blinder/cli.sh roadmap` if you want to refresh it manually).
+6. **Stop.** Tell the human the plan is in `blinder/feature_list.json` (board view in
+   `blinder/roadmap.md`), and that the loop can start on the first feature
    (`bash blinder/cli.sh next`).
 
 ## Rules

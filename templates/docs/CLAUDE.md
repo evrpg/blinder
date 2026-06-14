@@ -19,7 +19,8 @@ subagent cannot talk to the user:
 
 - **Planning** (macro) — follow `blinder/prompts/roles/planner.md`; when the human
   brings a big idea or a pile of ideas, split it into features and (after they
-  approve) insert each with `bash blinder/cli.sh new`, recording `blinder/roadmap.md`.
+  approve) insert each with `bash blinder/cli.sh new` (the `roadmap.md` board
+  regenerates automatically).
 - **Discussion** (micro) — follow `blinder/prompts/roles/discussion.md`; ask the
   human via `AskUserQuestion`; write `decisions.md` for one feature.
 - **Approval gate** — present the spec, wait for the human to approve.

@@ -14,11 +14,11 @@
 
 | Path | Contains | Read it when |
 |------|----------|--------------|
-| `blinder/cli.sh` | Vendored CLI — `new` / `set` / `status` / `next` (run `bash blinder/cli.sh …`) | Registering features; changing status; checking state |
+| `blinder/cli.sh` | Vendored CLI — `new` / `set` / `status` / `next` / `roadmap` (run `bash blinder/cli.sh …`) | Registering features; changing status; checking state |
 | `blinder/feature_list.json` | Feature list: status, deps, sdd flag | At start |
 | `blinder/progress/current.md` | Current session state (small) | At start |
 | `blinder/progress/history.md` | Append-only log of closed features | Only for historical context |
-| `blinder/roadmap.md` | Narrative: how an initiative was split into features (per epic) | Planning; understanding why a feature exists |
+| `blinder/roadmap.md` | **Generated** board (read-only) of `feature_list.json`, grouped by epic; regenerate with `blinder/cli.sh roadmap` (auto on `new`/`set`) | A human-readable overview |
 | `blinder/specs/<id>-<name>/decisions.md` | **Locked decisions** (the contract) | Before spec & implementation |
 | `blinder/specs/<id>-<name>/requirements.md` | EARS requirements `R1..Rn` | Before implementation & review |
 | `blinder/specs/<id>-<name>/design.md` | Technical design | Before implementation |

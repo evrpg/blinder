@@ -38,6 +38,7 @@ Usage:
   blinder.sh set    <FR-ID> <status> [--reason "..."]
   blinder.sh status
   blinder.sh next
+  blinder.sh roadmap
   blinder.sh help
 
 Commands:
@@ -47,6 +48,8 @@ Commands:
             bumps 'updated', sets/clears blocked_reason). Use this — never hand-edit JSON.
   status    Print a dashboard of all features, their state and dependencies.
   next      Print the next actionable feature (deps satisfied), or nothing.
+  roadmap   Regenerate blinder/roadmap.md (a human-readable board) from feature_list.json.
+            Also regenerated automatically by 'new' and 'set'.
   help      Show this help.
 
 Lifecycle:
@@ -94,7 +97,6 @@ cmd_init() {
   cp "$BLINDER_ROOT/templates/docs/decisions.md.tmpl"   "./blinder/prompts/decisions.template.md"
   cp "$BLINDER_ROOT/templates/progress/current.md"      "./blinder/progress/current.md"
   cp "$BLINDER_ROOT/templates/progress/history.md"      "./blinder/progress/history.md"
-  cp "$BLINDER_ROOT/templates/progress/roadmap.md"      "./blinder/roadmap.md"
   cp "$BLINDER_ROOT/templates/init.sh"                  "./blinder/init.sh"
   chmod +x "./blinder/init.sh"
 
@@ -108,9 +110,10 @@ cmd_init() {
   # Hook config for Claude Code
   cp "$BLINDER_ROOT/templates/config/claude_settings.json" "./.claude/settings.json"
 
-  # feature_list.json with project name
+  # feature_list.json with project name (+ initial generated roadmap board)
   jq --arg name "$PROJECT_NAME" '.project = $name' \
     "$BLINDER_ROOT/templates/config/feature_list.json" > "blinder/feature_list.json"
+  write_roadmap
 
   # Install role prompts + subagents
   bash "$BLINDER_ROOT/templates/install/install_agents.sh" "."
@@ -193,6 +196,7 @@ cmd_new() {
   TMP=$(mktemp)
   jq --argjson f "$NEW_FEATURE" '.features += [$f]' blinder/feature_list.json > "$TMP"
   mv "$TMP" blinder/feature_list.json
+  write_roadmap
 
   ok "Created $ID ($TITLE)"
   if [ -n "$EPIC" ]; then info "Epic: $EPIC"; fi
@@ -335,6 +339,7 @@ cmd_set() {
           then (if $reason != "" then $reason else .blocked_reason end)
           else null end)
     )' "$F" > "$TMP" && mv "$TMP" "$F"
+  write_roadmap
 
   ok "$ID → $ST"
   if [ "$ST" = "blocked" ] || [ "$ST" = "deferred" ]; then
@@ -342,6 +347,46 @@ cmd_set() {
     [ -n "$R" ] && info "reason: $R"
   fi
   return 0
+}
+
+# (Re)generate blinder/roadmap.md — a human-readable board derived from
+# feature_list.json (the single source of truth). Silent helper; safe to call after
+# any mutation. Grouped by epic, newest source data each time.
+write_roadmap() {
+  local F="blinder/feature_list.json" OUT="blinder/roadmap.md"
+  [ -f "$F" ] || return 0
+  local PROJECT; PROJECT=$(jq -r '.project' "$F")
+  {
+    echo "# Roadmap — $PROJECT"
+    echo ""
+    echo '<!-- AUTO-GENERATED from blinder/feature_list.json by `blinder/cli.sh roadmap`. Do not edit by hand. -->'
+    echo ""
+    if [ "$(jq '.features | length' "$F")" -eq 0 ]; then
+      echo '_No features yet. Add one: `blinder/cli.sh new "title"`._'
+    else
+      jq -r '"_\(.features|length) features — " + ([.features[].status] | group_by(.) | map("\(.[0]): \(length)") | join(", ")) + "_"' "$F"
+      echo ""
+      jq -r '([.features[].epic // ""] | unique) as $e
+             | (($e | map(select(. != ""))) + ($e | map(select(. == ""))))
+             | .[]' "$F" \
+      | while IFS= read -r EPIC; do
+          if [ -z "$EPIC" ]; then echo "## (no epic)"; else echo "## Epic: $EPIC"; fi
+          echo ""
+          echo "| Feature | Status | Depends on | Title | Description |"
+          echo "|---------|--------|------------|-------|-------------|"
+          jq -r --arg e "$EPIC" '.features[] | select((.epic // "") == $e)
+            | "| \(.id) | \(.status) | \(((.depends_on // []) | if length == 0 then "—" else join(", ") end)) | \(.title) | \(.description // "") |"' "$F"
+          echo ""
+        done
+    fi
+  } > "$OUT"
+}
+
+cmd_roadmap() {
+  require_jq
+  [ -f "blinder/feature_list.json" ] || error "blinder/feature_list.json not found. Run 'blinder.sh init' first."
+  write_roadmap
+  ok "Regenerated blinder/roadmap.md"
 }
 
 [ $# -lt 1 ] && { show_help; exit 1; }
@@ -352,6 +397,7 @@ case "$CMD" in
   set)             cmd_set "$@" ;;
   status)          cmd_status ;;
   next)            cmd_next ;;
+  roadmap)         cmd_roadmap ;;
   help|--help|-h)  show_help ;;
   *)               error "Unknown command: $CMD. Run 'blinder.sh help'." ;;
 esac
