@@ -4,7 +4,7 @@
 > review.** No application code is written until decisions are locked and the
 > spec is approved by a human.
 >
-> Features may be registered one at a time (`blinder.sh new`) or produced in a
+> Features may be registered one at a time (`blinder/cli.sh new`) or produced in a
 > batch by the **Planner** from a larger initiative (see `prompts/roles/planner.md`
 > + `roadmap.md`). Either way, each feature runs the per-feature flow below.
 

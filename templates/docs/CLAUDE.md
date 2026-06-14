@@ -9,7 +9,7 @@
 1. Read `AGENTS.md` (the map) and `blinder/progress/current.md` (small — where the
    last session left off). Do **not** read `history.md` or unrelated specs.
 2. Glance at `blinder/feature_list.json` for the active/next feature. Or run
-   `bash scripts/blinder.sh next` / `status`.
+   `bash blinder/cli.sh next` / `status`.
 3. If anything looks off, run `bash blinder/init.sh` (fast check).
 
 ## What you do vs. what you delegate
@@ -19,7 +19,7 @@ subagent cannot talk to the user:
 
 - **Planning** (macro) — follow `blinder/prompts/roles/planner.md`; when the human
   brings a big idea or a pile of ideas, split it into features and (after they
-  approve) insert each with `blinder.sh new`, recording `blinder/roadmap.md`.
+  approve) insert each with `bash blinder/cli.sh new`, recording `blinder/roadmap.md`.
 - **Discussion** (micro) — follow `blinder/prompts/roles/discussion.md`; ask the
   human via `AskUserQuestion`; write `decisions.md` for one feature.
 - **Approval gate** — present the spec, wait for the human to approve.
@@ -42,8 +42,8 @@ Then act on the first non-`done`/`deferred` feature whose deps are met:
 
 | Feature status | Your action |
 |----------------|-------------|
-| `pending` | Run the **discussion** phase yourself → status `discussed`. Then stop and offer to spec it. |
-| `discussed` | Dispatch **spec_author** → it sets `spec_ready`. Present the spec; **stop at the approval gate**. |
+| `pending` | Run the **discussion** phase yourself (ask via `AskUserQuestion`, write `decisions.md`, set `discussed`), then **continue without stopping** to the `discussed` step below. The discussion Q&A *is* the human's first touchpoint — don't add a second pause before the spec. |
+| `discussed` | Dispatch **spec_author** → it sets `spec_ready`. Present the spec and **stop at the approval gate** (the one hard stop before code). |
 | `spec_ready` + human approved | Set `in_progress`; dispatch **implementer**. |
 | `implemented` | Dispatch **reviewer**. Approved → `done` (it appends history). Rejected → re-dispatch **implementer** with notes. |
 | `in_progress` | Resume from `current.md`; re-dispatch the right subagent. |

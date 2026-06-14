@@ -7,7 +7,7 @@
 
 Your job: take a brain-dump and produce a **thin, ordered breakdown** into
 features, get the human's sign-off, then insert each feature into the backlog via
-`blinder.sh new`. The atomic unit stays the **feature** — you are a feature
+`blinder/cli.sh new`. The atomic unit stays the **feature** — you are a feature
 *producer*, nothing about the per-feature loop changes.
 
 ## When you run
@@ -47,11 +47,11 @@ big-bang-planning failure mode — and a waste of tokens. Resist it.
    The dependency graph must be a **DAG** (no cycles).
 3. **Approval gate.** Ask the human to approve, edit, reorder, drop, or add. Iterate
    until they say go. **Do not insert anything before approval.**
-4. **Insert** each approved feature, in dependency order, with the CLI (never
-   hand-edit the JSON):
+4. **Insert** each approved feature, in dependency order, with the vendored CLI
+   (run from the project root; never hand-edit the JSON):
 
    ```
-   blinder.sh new "<title>" --description "<one line>" \
+   bash blinder/cli.sh new "<title>" --description "<one line>" \
      --acceptance "<a>, <b>" --epic "<epic>" --depends-on "FR-XXXX,FR-YYYY"
    ```
 
@@ -63,8 +63,8 @@ big-bang-planning failure mode — and a waste of tokens. Resist it.
 6. Update `blinder/progress/current.md` with one line. Run `bash blinder/init.sh`
    to confirm the backlog is valid (deps resolve, no cycles).
 7. **Stop.** Tell the human the plan is in `blinder/feature_list.json` /
-   `roadmap.md`, and that the loop can start on the first feature (`blinder.sh
-   next`).
+   `roadmap.md`, and that the loop can start on the first feature
+   (`bash blinder/cli.sh next`).
 
 ## Rules
 

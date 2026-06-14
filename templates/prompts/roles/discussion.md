@@ -50,8 +50,11 @@ Do **not** read unrelated specs or the full history. Progressive disclosure.
    and `design.md`.
 6. Set the feature `status` to `discussed` and bump `updated` in
    `blinder/feature_list.json`. Update `blinder/progress/current.md` with one line.
-7. **Stop.** Tell the human: *"Decisions locked in `…/decisions.md`. Say **spec**
-   to draft the specification, or amend any decision first."*
+7. **Hand back to the Leader, which continues automatically to the spec phase** —
+   do **not** stop and ask the human to say "spec". The discussion Q&A you just ran
+   was the human's first touchpoint; the next (and only) hard stop is the spec
+   approval gate. The human can still amend a decision at any time (or reject the
+   spec), so there is no need for an extra pause here.
 
 ## Rules
 

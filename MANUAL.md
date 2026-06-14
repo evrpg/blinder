@@ -88,14 +88,15 @@ $EDITOR docs/architecture.md docs/conventions.md
 # 4. Baseline commit
 git add . && git commit -m "chore: scaffold blinder harness"
 
-# 5. Register your first feature
-/path/to/blinder/scripts/blinder.sh new "User login"
+# 5. Register your first feature — in-project, use the vendored CLI
+bash blinder/cli.sh new "User login"
 
 # 6. Open Claude Code and say:
 #    "Work the next pending feature."
 ```
 
-Convenience alias:
+Convenience alias — only needed to **bootstrap** new projects (`init`); inside a
+project everything runs via `bash blinder/cli.sh …`:
 
 ```bash
 alias blinder="/path/to/blinder/scripts/blinder.sh"
@@ -118,7 +119,8 @@ my-app/
 │   └── agents/               # spec_author, implementer, reviewer subagents
 └── blinder/
     ├── feature_list.json     # state: features, status, deps
-    ├── init.sh               # tiered verification (fast / --full)
+    ├── cli.sh                # vendored CLI (new/status/next) — runs in-project, no alias needed
+    ├── init.sh               # tiered verification (fast / --full); project-owned, self-tunes
     ├── CHECKPOINTS.md         # done-criteria
     ├── roadmap.md            # narrative: how initiatives split into features
     ├── prompts/
@@ -134,13 +136,21 @@ my-app/
 
 ## 6. CLI reference
 
+Two ways to reach the CLI:
+
+- **Bootstrapping a new project** — `init` needs the source repo, so use its path or
+  an alias: `blinder init …` (see [Install](#4-install--quickstart)).
+- **Inside a scaffolded project** — `init` vendors a copy to `blinder/cli.sh`, so use
+  **`bash blinder/cli.sh <cmd>`**. This needs no alias and works for agents running
+  non-interactively (which is exactly why the Planner relies on it).
+
 | Command | What it does |
 |---------|--------------|
-| `blinder init [--name N]` | Scaffold the harness into the current dir. |
-| `blinder new "title" [opts]` | Register a feature; assigns `FR-XXXX`. |
-| `blinder status` | Dashboard: id, status, sdd, deps, title (+ blocked reasons), grouped by epic. |
-| `blinder next` | Print the next actionable feature (dependencies satisfied). |
-| `blinder help` | Usage. |
+| `blinder init [--name N]` | Scaffold the harness into the current dir (source CLI only). |
+| `bash blinder/cli.sh new "title" [opts]` | Register a feature; assigns `FR-XXXX`. |
+| `bash blinder/cli.sh status` | Dashboard: id, status, sdd, deps, title (+ blocked reasons), grouped by epic. |
+| `bash blinder/cli.sh next` | Print the next actionable feature (dependencies satisfied). |
+| `bash blinder/cli.sh help` | Usage. |
 
 `new` options: `--description "..."`, `--acceptance "a, b, c"`,
 `--depends-on "FR-0001,FR-0002"`, `--epic "name"` (group related features),

@@ -95,6 +95,13 @@ cmd_init() {
   cp "$BLINDER_ROOT/templates/init.sh"                  "./blinder/init.sh"
   chmod +x "./blinder/init.sh"
 
+  # Vendor the CLI so feature management works in-project without a global install
+  # or shell alias (agents run non-interactively). This is a disposable snapshot —
+  # safe to overwrite on a harness upgrade. (init.sh is kept separate: it is
+  # project-owned and tuned via PROJECT_COMPILE_CMD/PROJECT_TEST_CMD.)
+  cp "$BLINDER_ROOT/scripts/blinder.sh"                 "./blinder/cli.sh"
+  chmod +x "./blinder/cli.sh"
+
   # Hook config for Claude Code
   cp "$BLINDER_ROOT/templates/config/claude_settings.json" "./.claude/settings.json"
 
@@ -108,8 +115,8 @@ cmd_init() {
   ok "Blinder harness initialized."
   info "Next steps:"
   echo "  1. Fill docs/architecture.md and docs/conventions.md for your project."
-  echo "  2. Run: bash blinder/init.sh   (fast verification)"
-  echo "  3. Add a feature:  blinder.sh new \"My feature\""
+  echo "  2. Run: bash blinder/init.sh        (fast verification)"
+  echo "  3. Add a feature:  bash blinder/cli.sh new \"My feature\""
   echo "  4. Open Claude Code and say: \"Work the next pending feature.\""
 }
 

@@ -119,8 +119,8 @@ $EDITOR docs/architecture.md docs/conventions.md
 # 4. Baseline commit
 git add . && git commit -m "chore: scaffold blinder harness"
 
-# 5a. Register a single feature…
-blinder new "User login"
+# 5a. Register a single feature… (in-project: use the vendored CLI)
+bash blinder/cli.sh new "User login"
 
 # 5b. …or bring a big idea and let the Planner split it:
 #     open Claude Code and say:  "plan: <your brain-dump>"
@@ -131,13 +131,17 @@ blinder new "User login"
 
 ## CLI reference
 
+`init` runs from the source repo (alias or path). Everything else runs **inside a
+scaffolded project** via the vendored copy at `blinder/cli.sh` — no alias needed,
+which is what lets the Planner call it from a non-interactive agent shell.
+
 | Command | Description |
 |---------|-------------|
-| `blinder init [--name N]` | Scaffold the harness into the current directory. |
-| `blinder new "title" [opts]` | Register a feature; assigns the next `FR-XXXX` id. |
-| `blinder status` | Dashboard of all features — state, deps, blocked reasons — grouped by epic. |
-| `blinder next` | Print the next actionable feature (all dependencies satisfied). |
-| `blinder help` | Usage. |
+| `blinder init [--name N]` | Scaffold the harness into the current directory (source CLI). |
+| `bash blinder/cli.sh new "title" [opts]` | Register a feature; assigns the next `FR-XXXX` id. |
+| `bash blinder/cli.sh status` | Dashboard of all features — state, deps, blocked reasons — grouped by epic. |
+| `bash blinder/cli.sh next` | Print the next actionable feature (all dependencies satisfied). |
+| `bash blinder/cli.sh help` | Usage. |
 
 **`new` options:** `--description "…"` · `--acceptance "a, b, c"` ·
 `--depends-on "FR-0001,FR-0002"` · `--epic "name"` · `--no-sdd` (skip the SDD flow
@@ -160,7 +164,8 @@ my-app/
 │   └── agents/               # spec_author · implementer · reviewer (subagents)
 └── blinder/
     ├── feature_list.json     # canonical state: features, status, deps, epics
-    ├── init.sh               # tiered verification (fast / --full); self-tunes per project
+    ├── cli.sh                # vendored CLI (new/status/next); runs in-project, no alias needed
+    ├── init.sh               # tiered verification (fast / --full); project-owned, self-tunes
     ├── CHECKPOINTS.md        # objective done-criteria
     ├── roadmap.md            # narrative: how initiatives split into features
     ├── prompts/
