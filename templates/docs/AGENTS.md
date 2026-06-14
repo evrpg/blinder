@@ -37,16 +37,17 @@
 | **leader** | main thread (`CLAUDE.md`) | Orchestrate; run planning/discussion/approval; dispatch subagents; update state | Write app code; skip gates |
 | **planner** | main thread | Split an initiative into features (thin); insert via `blinder/cli.sh new`; keep `roadmap.md` | Design or implement; lock per-feature detail |
 | **discussion** | main thread | Ask the human (`AskUserQuestion`); write `decisions.md` | Guess decisions |
-| **spec_author** | subagent | Write requirements/design/tasks from decisions | Write code or tests |
-| **implementer** | subagent | Red-green TDD per task | Skip the spec; gold-plate |
-| **reviewer** | subagent | Traceability + add edge tests + full suite | Edit feature code |
+| **spec_author** | subagent | Write requirements/design/tasks **and the failing test suite** from decisions | Write application code |
+| **implementer** | subagent | Make the pre-written tests pass, task by task | Edit tests; skip the spec; gold-plate |
+| **reviewer** | subagent | Audit code vs spec + harden tests + full suite | Edit feature code |
 
 ## Lifecycle
 
 ```
 (big idea) → [planner] → features inserted (pending, deps, epic)   ← macro, optional
-pending → [discussion] → discussed → [spec_author] → spec_ready
-       → ⏸ HUMAN → in_progress → [implementer/TDD] → implemented → [reviewer] → done
+pending → [discussion] → discussed → [spec_author: spec + tests] → spec_ready
+       → ⏸ HUMAN approves spec+tests → in_progress → [implementer: make tests pass]
+       → implemented → [reviewer: audit + harden] → done
        (blocked / deferred reachable any time, with a recorded reason)
 ```
 

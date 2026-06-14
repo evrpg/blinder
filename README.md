@@ -15,7 +15,8 @@ orchestrate *itself* reliably:
 
 - **Lock decisions with you before any code** (a discussion phase that asks real questions).
 - **Write specs as contracts** (EARS requirements → design → tasks, with stable IDs).
-- **Implement test-first** (red-green TDD; the reviewer adds edge-case tests).
+- **Test independently of the code** — `spec_author` writes the failing tests with the
+  spec; the implementer only makes them pass; the reviewer audits the code against the spec.
 - **Track everything on disk** so work resumes after any interruption.
 - **Stay token-frugal** by design.
 
@@ -68,13 +69,13 @@ the **per-feature loop** (micro) runs on each one.
 pending
   → [DISCUSSION]     ask questions (AskUserQuestion) → write decisions.md   ← main thread
   → discussed
-  → [SPEC]           requirements.md (EARS) + design.md + tasks.md          ← subagent
+  → [SPEC]           requirements (EARS) + design + tasks + failing tests    ← subagent
   → spec_ready
-  → ⏸ YOU APPROVE
+  → ⏸ YOU APPROVE (spec + tests)
   → in_progress
-  → [IMPLEMENT]      per task: failing test → minimal code → green (TDD)    ← subagent
+  → [IMPLEMENT]      per task: run its tests → code → green (tests read-only) ← subagent
   → implemented
-  → [REVIEW]         requirement→test traceability + add edge tests + full suite ← subagent
+  → [REVIEW]         audit code vs spec + harden tests + full suite          ← subagent
   → done
                      (blocked / deferred reachable any time, with a reason)
 ```
@@ -188,9 +189,11 @@ my-app/
   ("When `<trigger>`, the system shall `<response>`") and a stable label `R1, R2, …`.
 - **Stable task IDs:** `FR-0001-T3` — referenced in `tasks.md` and commit messages,
   never renumbered.
-- **TDD:** the implementer writes a failing test before the code for each task; the
-  reviewer adds edge/negative/boundary tests. A feature can't reach `done` with a red
-  suite.
+- **Tests as an independent oracle:** `spec_author` writes the failing tests *with*
+  the spec (you approve them too); the implementer only makes them pass and never
+  edits them; the reviewer audits the code against the spec and adds edge/negative
+  tests. A feature can't reach `done` with a red suite. See [Model tiering](./MANUAL.md#85-model-tiering-optional-advanced)
+  for assigning a cheaper model to the implementer.
 - **Tiered verification** (`blinder/init.sh`): the fast tier (structural checks +
   `feature_list.json` validity + dependency graph sanity + compile/typecheck) runs on
   the edit hook; `--full` additionally runs the test suite at the review gate.

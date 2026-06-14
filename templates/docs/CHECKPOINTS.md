@@ -28,8 +28,11 @@
 - [ ] Changed files match `docs/conventions.md` (style/naming/errors)
 - [ ] No stray debug prints or contextless TODOs
 
-## C5 — Verification is real (TDD)
+## C5 — Verification is real
 
-- [ ] Every `R<n>` has at least one traceable test (see `review.md`)
+- [ ] Every `R<n>` has at least one test that genuinely verifies it (authored by
+      spec_author from the spec; see `review.md` traceability)
+- [ ] The reviewer audited the code against each `R<n>` directly — green tests alone
+      did not decide the verdict (see `review.md` implementation audit)
 - [ ] Reviewer added edge/negative/boundary tests
 - [ ] All tests pass under `blinder/init.sh --full`

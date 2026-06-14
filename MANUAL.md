@@ -19,8 +19,10 @@ interruptions, and verify with tests — while keeping token use low.
   before the spec is approved.
 - **Decisions are the contract.** A discussion phase resolves ambiguity with you
   *before* anything is written, recorded as a Locked Decisions table.
-- **TDD.** A failing test is written before the code that passes it; the reviewer
-  adds edge-case tests after.
+- **Tests as an independent oracle.** `spec_author` writes the failing test suite
+  *with* the spec (before approval); the `implementer` only makes those tests pass
+  and never edits them; the `reviewer` audits the code against the spec and adds
+  more tests. Test-author ≠ code-author, so green means something.
 - **State lives on disk.** `blinder/feature_list.json` + per-feature spec files are
   the source of truth, so any session can resume exactly where the last stopped.
 - **Token-frugal by design** (see §8).
@@ -57,13 +59,13 @@ features; the **per-feature loop** (micro) then runs on each one.
 pending
   → [DISCUSSION · Leader]   ask questions → write decisions.md
   → discussed
-  → [SPEC · spec_author]    requirements.md (EARS) + design.md + tasks.md
+  → [SPEC · spec_author]    requirements.md (EARS) + design.md + tasks.md + failing tests
   → spec_ready
-  → ⏸ YOU APPROVE
+  → ⏸ YOU APPROVE (spec + tests)
   → in_progress
-  → [IMPLEMENT · implementer]  per task: failing test → code → green
+  → [IMPLEMENT · implementer]  per task: run its tests → code → green (tests read-only)
   → implemented
-  → [REVIEW · reviewer]     traceability + add edge tests + full suite
+  → [REVIEW · reviewer]     audit code vs spec + harden tests + full suite
   → done
 ```
 
@@ -196,15 +198,17 @@ cycles.
 2. **Discussion.** The Leader asks you a few batched questions (each with a
    recommended default). Answer them; it writes `decisions.md` and **continues
    automatically** to the spec — no extra "say spec" step.
-3. **Spec.** `spec_author` writes `requirements.md`, `design.md`, `tasks.md`, and the
-   Leader presents the spec, stopping at `spec_ready`.
-4. **Approve.** Read the spec. Say **"approved"** → the Leader flips it to
-   `in_progress`. Or ask for changes (see below).
-5. **Implement.** The `implementer` does red-green TDD task by task, then runs the
-   full suite and sets `implemented`.
-6. **Review.** The `reviewer` checks every requirement has a test, adds edge-case
-   tests, runs `init.sh --full`, and writes `review.md`. If approved → `done` and
-   appended to `history.md`; if rejected → back to the implementer with notes.
+3. **Spec.** `spec_author` writes `requirements.md`, `design.md`, `tasks.md`, **and
+   the failing test suite**; the Leader presents it all, stopping at `spec_ready`.
+4. **Approve.** Read the spec **and the tests** — the tests are part of the contract.
+   Say **"approved"** → the Leader flips it to `in_progress`. Or ask for changes (see
+   below).
+5. **Implement.** The `implementer` makes the pre-written tests pass task by task
+   (never editing them), runs the full suite, and sets `implemented`.
+6. **Review.** The `reviewer` **audits the code against each requirement** (not just
+   that tests are green), adds edge-case tests, runs `init.sh --full`, and writes
+   `review.md`. If approved → `done` and appended to `history.md`; if rejected → back
+   to the implementer with notes.
 
 So per feature there are **two human touchpoints**: the discussion Q&A and the spec
 approval. You can stop after any phase and resume later — state is on disk.
@@ -244,6 +248,39 @@ These are baked into the prompts and tooling; good to know so you don't undo the
 5. **Locked decisions + EARS.** Dense, scannable artifacts that prevent
    re-explaining the same thing — re-litigation is where tokens are wasted.
 6. **One feature at a time.** Keeps the working set small.
+
+---
+
+## 8.5. Model tiering (optional, advanced)
+
+The roles split by how much **judgment** they need, which lets you spend a strong
+model where it matters and a cheaper one where the work is mechanical:
+
+| Role | Judgment | Suggested model |
+|------|----------|-----------------|
+| leader / discussion / planner (main thread) | high (ambiguity, questions, routing) | **strong** |
+| spec_author (requirements + design + **tests**) | high (defines correctness) | **strong** |
+| reviewer (audits code vs spec) | high (correctness judgment) | **strong** |
+| implementer (make the pre-written tests pass) | low (mechanical execution) | **mid** |
+
+This is why the test/implement split exists: with `spec_author` (strong) authoring
+the tests and the `reviewer` (strong) auditing the code, the **implementer can be a
+cheaper model** and still be safe — it's bracketed by two strong correctness gates,
+and implementation is usually the highest-token phase, so that's where the savings
+concentrate.
+
+How to set it:
+
+- **Main-thread roles** (leader/discussion/planner) use whatever model you launched
+  the Claude Code session with — launch with the strong one.
+- **Subagents** take a `model:` line in their frontmatter at `.claude/agents/<role>.md`
+  (e.g. `model: sonnet`). Set `spec_author` and `reviewer` to a strong model and
+  `implementer` to a mid one; omit the line to inherit the session model.
+
+Cautions: don't pick the *weakest* model for the implementer (it still writes real
+logic and must match `design.md` signatures), and watch for repeated review
+rejections on a feature — that's the signal the implementer is under-resourced for
+that work and the rework loop is costing more than a better model would.
 
 ---
 

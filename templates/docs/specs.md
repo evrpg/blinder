@@ -1,8 +1,8 @@
 # Spec-Driven Development (SDD) — the process
 
-> Flow: **discussion → spec (requirements → design → tasks) → approval → TDD →
-> review.** No application code is written until decisions are locked and the
-> spec is approved by a human.
+> Flow: **discussion → spec (requirements → design → tasks → tests) → approval →
+> implement → review.** No application code is written until decisions are locked
+> and the spec **and its tests** are approved by a human.
 >
 > Features may be registered one at a time (`blinder/cli.sh new`) or produced in a
 > batch by the **Planner** from a larger initiative (see `prompts/roles/planner.md`
@@ -15,10 +15,13 @@ Each feature with `"sdd": true` gets a folder `blinder/specs/<id>-<name>/`:
 ```
 decisions.md      # Locked decisions table (D1..Dn) — produced in discussion
 requirements.md   # WHAT — testable EARS requirements (R1..Rn)
-design.md         # HOW  — files, signatures, alternatives; cites D<n>
-tasks.md          # STEPS — ordered checklist (<id>-T1..Tn), each maps to R<n>
-review.md         # Reviewer verdict + requirement→test traceability
+design.md         # HOW  — files, public signatures, alternatives; cites D<n>
+tasks.md          # STEPS — ordered checklist (<id>-T1..Tn); each maps to R<n> + its tests
+review.md         # Reviewer verdict — code-vs-spec audit + traceability
 ```
+
+Plus the **test files** themselves, written by `spec_author` in the project's test
+location (per `conventions.md`) — they encode the requirements and start out red.
 
 ## Feature states
 
@@ -26,8 +29,8 @@ review.md         # Reviewer verdict + requirement→test traceability
 |-------|---------|-----------------|
 | `pending` | No decisions yet | discussion (Leader) |
 | `discussed` | Decisions locked; no spec yet | spec_author |
-| `spec_ready` | Spec drafted; awaiting approval. **No code touched.** | human → Leader |
-| `in_progress` | Approved; implementer working (TDD) | implementer |
+| `spec_ready` | Spec **+ failing tests** drafted; awaiting approval. **No code touched.** | human → Leader |
+| `in_progress` | Approved; implementer making the tests pass | implementer |
 | `implemented` | Code green; awaiting review | reviewer |
 | `done` | Reviewer approved; history appended | reviewer |
 | `blocked` | Stuck; reason in `current.md`/`feature_list.json` | human |
@@ -37,20 +40,30 @@ review.md         # Reviewer verdict + requirement→test traceability
 
 1. **Discussion** (start): the Leader asks questions via `AskUserQuestion` and
    records answers in `decisions.md`. This is where ambiguity dies.
-2. **Approval gate** (after `spec_ready`): the human reads the spec and says
-   **"approved"** (or requests changes). Only then does implementation begin.
+2. **Approval gate** (after `spec_ready`): the human reads the spec **and the
+   tests** and says **"approved"** (or requests changes). Only then does
+   implementation begin.
 
 ```
-pending → [discussion] → discussed → [spec_author] → spec_ready
-       → ⏸ HUMAN APPROVES → in_progress → [implementer] → implemented → [reviewer] → done
+pending → [discussion] → discussed → [spec_author: spec + tests] → spec_ready
+       → ⏸ HUMAN APPROVES → in_progress → [implementer: make tests pass]
+       → implemented → [reviewer: audit + harden] → done
 ```
 
 ## TDD contract
 
-`rules.tdd = true`. The implementer writes a **failing test first** for each task,
-then the minimal code to pass it. The reviewer **adds** edge/negative/boundary
-tests afterward. A feature cannot reach `done` with a red suite
-(`rules.require_tests_to_close`).
+`rules.tdd = true`, but test authoring is **separated from implementation** so the
+tests are an independent oracle:
+
+- **`spec_author`** writes the failing test suite *with* the spec (before approval),
+  so the human approves the tests too and they stay consistent with the requirements
+  and `design.md` signatures.
+- **`implementer`** only makes those tests pass — it **never edits them**; if a test
+  looks wrong, it escalates to the Leader.
+- **`reviewer`** audits the code against each `R<n>` directly (green tests are an
+  input, not the verdict) and **adds** edge/negative/boundary tests.
+
+A feature cannot reach `done` with a red suite (`rules.require_tests_to_close`).
 
 ## EARS quick reference (for `requirements.md`)
 

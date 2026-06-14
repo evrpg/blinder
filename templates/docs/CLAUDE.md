@@ -27,9 +27,10 @@ subagent cannot talk to the user:
 Everything else is a **subagent** dispatched with the `Agent` tool (their context
 is discarded on return — this keeps your context lean and cheap):
 
-- `spec_author` — drafts `requirements.md` / `design.md` / `tasks.md`.
-- `implementer` — red-green TDD against the approved spec.
-- `reviewer` — traceability + adds tests + full suite → verdict.
+- `spec_author` — drafts `requirements.md` / `design.md` / `tasks.md` **and the
+  failing test suite** (the tests are part of what the human approves).
+- `implementer` — makes the pre-written tests pass, task by task (tests read-only).
+- `reviewer` — audits code vs spec + hardens tests + full suite → verdict.
 
 ## Routing
 
@@ -43,7 +44,7 @@ Then act on the first non-`done`/`deferred` feature whose deps are met:
 | Feature status | Your action |
 |----------------|-------------|
 | `pending` | Run the **discussion** phase yourself (ask via `AskUserQuestion`, write `decisions.md`, set `discussed`), then **continue without stopping** to the `discussed` step below. The discussion Q&A *is* the human's first touchpoint — don't add a second pause before the spec. |
-| `discussed` | Dispatch **spec_author** → it sets `spec_ready`. Present the spec and **stop at the approval gate** (the one hard stop before code). |
+| `discussed` | Dispatch **spec_author** → it writes the spec **and the failing tests**, sets `spec_ready`. Present the spec + tests and **stop at the approval gate** (the one hard stop before code). |
 | `spec_ready` + human approved | `bash blinder/cli.sh set <id> in_progress`; dispatch **implementer**. |
 | `spec_ready` + human requests changes | Do **not** implement. Amend per "Amending at the approval gate" below, then re-present and wait for approval again. |
 | `implemented` | Dispatch **reviewer**. Approved → `done` (it appends history). Rejected → re-dispatch **implementer** with notes. |
@@ -85,8 +86,8 @@ spec.
 
 ```
 (big idea) → [planner · you] → features inserted (pending, deps, epic)
-pending → [discussion · you] → discussed → [spec_author] → spec_ready
-       → ⏸ HUMAN APPROVES → in_progress → [implementer · TDD]
-       → implemented → [reviewer · +tests] → done
+pending → [discussion · you] → discussed → [spec_author · spec + tests] → spec_ready
+       → ⏸ HUMAN APPROVES spec+tests → in_progress → [implementer · make tests pass]
+       → implemented → [reviewer · audit + harden] → done
                                    (blocked / deferred any time, with a reason)
 ```
