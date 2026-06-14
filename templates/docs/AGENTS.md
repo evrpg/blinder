@@ -14,7 +14,7 @@
 
 | Path | Contains | Read it when |
 |------|----------|--------------|
-| `blinder/cli.sh` | Vendored CLI — `new` / `status` / `next` (run `bash blinder/cli.sh …`) | Registering features; checking state |
+| `blinder/cli.sh` | Vendored CLI — `new` / `set` / `status` / `next` (run `bash blinder/cli.sh …`) | Registering features; changing status; checking state |
 | `blinder/feature_list.json` | Feature list: status, deps, sdd flag | At start |
 | `blinder/progress/current.md` | Current session state (small) | At start |
 | `blinder/progress/history.md` | Append-only log of closed features | Only for historical context |

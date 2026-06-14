@@ -44,7 +44,7 @@ Then act on the first non-`done`/`deferred` feature whose deps are met:
 |----------------|-------------|
 | `pending` | Run the **discussion** phase yourself (ask via `AskUserQuestion`, write `decisions.md`, set `discussed`), then **continue without stopping** to the `discussed` step below. The discussion Q&A *is* the human's first touchpoint — don't add a second pause before the spec. |
 | `discussed` | Dispatch **spec_author** → it sets `spec_ready`. Present the spec and **stop at the approval gate** (the one hard stop before code). |
-| `spec_ready` + human approved | Set `in_progress`; dispatch **implementer**. |
+| `spec_ready` + human approved | `bash blinder/cli.sh set <id> in_progress`; dispatch **implementer**. |
 | `spec_ready` + human requests changes | Do **not** implement. Amend per "Amending at the approval gate" below, then re-present and wait for approval again. |
 | `implemented` | Dispatch **reviewer**. Approved → `done` (it appends history). Rejected → re-dispatch **implementer** with notes. |
 | `in_progress` | Resume from `current.md`; re-dispatch the right subagent. |
@@ -75,6 +75,9 @@ spec.
 - ❌ Do not skip discussion, the spec phase, or the approval gate.
 - ❌ Do not run more than one feature at a time (`one_feature_at_a_time`).
 - ❌ Do not mark a feature `done` yourself — only the reviewer's approval does.
+- ❌ Do not hand-edit `blinder/feature_list.json`. Change status only via
+  `bash blinder/cli.sh set <id> <status> [--reason "…"]` (it validates the value,
+  enforces one `in_progress`, bumps `updated`, and sets/clears `blocked_reason`).
 - ✅ Keep your messages short and decision-only. Reference files by `path` (and
   `path:line`); never paste large file bodies into the conversation.
 

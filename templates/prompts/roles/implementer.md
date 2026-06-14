@@ -34,7 +34,7 @@ files only as a task requires. Don't re-read what you already hold.
    d. If you get stuck, mark `[!]`, write the reason in `current.md`, and stop.
 3. When all tasks are `[x]`, run the **full** suite: `bash blinder/init.sh --full`.
    It must exit 0. Fix anything that fails before continuing.
-4. Set feature `status` to `implemented`; bump `updated`. Summarize what shipped
+4. Run `bash blinder/cli.sh set <id> implemented` (never hand-edit `feature_list.json`). Summarize what shipped
    in `current.md`.
 5. **Stop.** The Leader launches the Reviewer next.
 

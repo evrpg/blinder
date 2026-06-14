@@ -48,8 +48,9 @@ Do **not** read unrelated specs or the full history. Progressive disclosure.
 
    Number decisions `D1, D2, …`. These IDs are referenced by `requirements.md`
    and `design.md`.
-6. Set the feature `status` to `discussed` and bump `updated` in
-   `blinder/feature_list.json`. Update `blinder/progress/current.md` with one line.
+6. Set the status with `bash blinder/cli.sh set <id> discussed` (never hand-edit
+   `feature_list.json` — the command validates and bumps `updated`). Update
+   `blinder/progress/current.md` with one line.
 7. **Hand back to the Leader, which continues automatically to the spec phase** —
    do **not** stop and ask the human to say "spec". The discussion Q&A you just ran
    was the human's first touchpoint; the next (and only) hard stop is the spec

@@ -59,7 +59,7 @@ dependency. Tasks must be small enough to implement test-first in one sitting.
 
 ## Close-out
 
-- Set feature `status` to `spec_ready`; bump `updated`.
+- Run `bash blinder/cli.sh set <id> spec_ready` (never hand-edit `feature_list.json`).
 - Update `blinder/progress/current.md` (one line).
 - **Stop.** Do not implement. The Leader presents the spec to the human for approval.
 

@@ -148,6 +148,7 @@ Two ways to reach the CLI:
 |---------|--------------|
 | `blinder init [--name N]` | Scaffold the harness into the current dir (source CLI only). |
 | `bash blinder/cli.sh new "title" [opts]` | Register a feature; assigns `FR-XXXX`. |
+| `bash blinder/cli.sh set <id> <status> [--reason "…"]` | Transition a feature's status — validates the value, enforces one `in_progress`, bumps `updated`, sets/clears `blocked_reason`. Agents use this for every phase change instead of editing the JSON. |
 | `bash blinder/cli.sh status` | Dashboard: id, status, sdd, deps, title (+ blocked reasons), grouped by epic. |
 | `bash blinder/cli.sh next` | Print the next actionable feature (dependencies satisfied). |
 | `bash blinder/cli.sh help` | Usage. |

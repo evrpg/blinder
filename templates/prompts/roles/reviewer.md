@@ -56,11 +56,12 @@ review verdict.
 
 ## Close-out
 
-- **APPROVED** → set feature `status` to `done`, bump `updated`, append a block to
+- **APPROVED** → `bash blinder/cli.sh set <id> done`, append a block to
   `blinder/progress/history.md`, clear the active line in `current.md`, and tell
-  the Leader.
-- **REJECTED** → leave `status` at `implemented` (or set `in_progress`), list what
-  must change. The Leader re-launches the Implementer with your notes.
+  the Leader. (Never hand-edit `feature_list.json`.)
+- **REJECTED** → leave `status` at `implemented` (or `bash blinder/cli.sh set <id>
+  in_progress`), list what must change. The Leader re-launches the Implementer with
+  your notes.
 
 ## Keep the harness sharp
 

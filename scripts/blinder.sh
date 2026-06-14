@@ -35,6 +35,7 @@ Usage:
   blinder.sh init   [--name "project-name"]
   blinder.sh new    "feature title" [--description "..."] [--acceptance "a, b, c"]
                     [--depends-on "FR-0001,FR-0002"] [--epic "name"] [--no-sdd]
+  blinder.sh set    <FR-ID> <status> [--reason "..."]
   blinder.sh status
   blinder.sh next
   blinder.sh help
@@ -42,6 +43,8 @@ Usage:
 Commands:
   init      Scaffold the harness into the current directory (Claude Code).
   new       Register a new feature in blinder/feature_list.json (assigns FR-XXXX).
+  set       Transition a feature's status (validates value, enforces one in_progress,
+            bumps 'updated', sets/clears blocked_reason). Use this — never hand-edit JSON.
   status    Print a dashboard of all features, their state and dependencies.
   next      Print the next actionable feature (deps satisfied), or nothing.
   help      Show this help.
@@ -289,11 +292,64 @@ cmd_next() {
   fi
 }
 
+# Transition a feature's status safely (validates value, enforces one_feature_at_a_time,
+# bumps `updated`, sets/clears `blocked_reason`). Agents must use this instead of
+# hand-editing feature_list.json.
+cmd_set() {
+  require_jq
+  [ -f "blinder/feature_list.json" ] || error "blinder/feature_list.json not found. Run 'blinder.sh init' first."
+  [ $# -lt 2 ] && error "Usage: blinder.sh set <FR-ID> <status> [--reason \"...\"]"
+
+  local ID="$1" ST="$2"; shift 2
+  local REASON=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --reason) REASON="$2"; shift 2 ;;
+      *) error "Unknown argument: $1" ;;
+    esac
+  done
+
+  local F="blinder/feature_list.json"
+  jq -e --arg id "$ID" 'any(.features[]; .id == $id)' "$F" >/dev/null 2>&1 \
+    || error "No such feature: $ID"
+  jq -e --arg s "$ST" '(.rules.valid_status | index($s)) != null' "$F" >/dev/null 2>&1 \
+    || error "Invalid status '$ST'. Allowed: $(jq -r '.rules.valid_status | join(", ")' "$F")"
+
+  if [ "$ST" = "in_progress" ]; then
+    local OTHERS
+    OTHERS=$(jq -r --arg id "$ID" '[.features[] | select(.status=="in_progress" and .id != $id) | .id] | join(", ")' "$F")
+    [ -n "$OTHERS" ] && error "one_feature_at_a_time: $OTHERS already in_progress. Move it off in_progress first."
+  fi
+
+  if { [ "$ST" = "blocked" ] || [ "$ST" = "deferred" ]; } && [ -z "$REASON" ]; then
+    warn "no --reason given for '$ST'; keeping any existing reason."
+  fi
+
+  local TS TMP; TS=$(now_utc); TMP=$(mktemp)
+  jq --arg id "$ID" --arg s "$ST" --arg ts "$TS" --arg reason "$REASON" '
+    (.features[] | select(.id == $id)) |= (
+      .status = $s
+      | .updated = $ts
+      | .blocked_reason = (
+          if ($s == "blocked" or $s == "deferred")
+          then (if $reason != "" then $reason else .blocked_reason end)
+          else null end)
+    )' "$F" > "$TMP" && mv "$TMP" "$F"
+
+  ok "$ID → $ST"
+  if [ "$ST" = "blocked" ] || [ "$ST" = "deferred" ]; then
+    local R; R=$(jq -r --arg id "$ID" '.features[] | select(.id==$id) | .blocked_reason // empty' "$F")
+    [ -n "$R" ] && info "reason: $R"
+  fi
+  return 0
+}
+
 [ $# -lt 1 ] && { show_help; exit 1; }
 CMD="$1"; shift
 case "$CMD" in
   init)            cmd_init "$@" ;;
   new)             cmd_new "$@" ;;
+  set)             cmd_set "$@" ;;
   status)          cmd_status ;;
   next)            cmd_next ;;
   help|--help|-h)  show_help ;;
