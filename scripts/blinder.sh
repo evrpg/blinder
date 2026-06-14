@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# blinder.sh — Custom AI Agent Harness CLI
+# blinder.sh — Claude-native Spec-Driven Development harness CLI (v3)
 
 set -euo pipefail
 
@@ -13,29 +13,43 @@ GREEN=$'\e[0;32m'
 YELLOW=$'\e[0;33m'
 BLUE=$'\e[0;34m'
 CYAN=$'\e[0;36m'
+GREY=$'\e[0;90m'
 NC=$'\e[0m'
 
-# Logger helpers
 info()  { printf "${BLUE}[INFO]${NC}  %s\n" "$1"; }
 ok()    { printf "${GREEN}[OK]${NC}    %s\n" "$1"; }
 warn()  { printf "${YELLOW}[WARN]${NC}  %s\n" "$1"; }
 error() { printf "${RED}[ERROR]${NC} %s\n" "$1"; exit 1; }
 
+now_utc() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+require_jq() {
+  command -v jq >/dev/null 2>&1 || error "jq is required but not installed. Install jq and retry."
+}
+
 show_help() {
   cat <<EOF
-Blinder — Custom AI Agent Harness CLI
+Blinder — Claude-native Spec-Driven Development harness
 
 Usage:
-  blinder.sh init [--name "project-name"]
-  blinder.sh new "feature title" [--no-sdd]
+  blinder.sh init   [--name "project-name"]
+  blinder.sh new    "feature title" [--description "..."] [--acceptance "a, b, c"]
+                    [--depends-on "FR-0001,FR-0002"] [--epic "name"] [--no-sdd]
   blinder.sh status
+  blinder.sh next
   blinder.sh help
 
 Commands:
-  init      Scaffold the full harness structure into the current directory.
-  new       Add a new feature to feature_list.json.
-  status    Pretty-print the status of all features.
-  help      Show this help message.
+  init      Scaffold the harness into the current directory (Claude Code).
+  new       Register a new feature in blinder/feature_list.json (assigns FR-XXXX).
+  status    Print a dashboard of all features, their state and dependencies.
+  next      Print the next actionable feature (deps satisfied), or nothing.
+  help      Show this help.
+
+Lifecycle:
+  pending -> [discussion] -> discussed -> [spec] -> spec_ready
+          -> (HUMAN APPROVES) -> in_progress -> [implement/TDD]
+          -> implemented -> [review] -> done       (blocked / deferred any time)
 EOF
 }
 
@@ -43,232 +57,238 @@ cmd_init() {
   PROJECT_NAME=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --name)
-        PROJECT_NAME="$2"
-        shift 2
-        ;;
-      *)
-        error "Unknown argument: $1"
-        ;;
+      --name) PROJECT_NAME="$2"; shift 2 ;;
+      *) error "Unknown argument: $1" ;;
     esac
   done
+  require_jq
 
-  if [ -z "$PROJECT_NAME" ]; then
-    PROJECT_NAME="$(basename "$(pwd)")"
-  fi
+  [ -z "$PROJECT_NAME" ] && PROJECT_NAME="$(basename "$(pwd)")"
 
-  if [ -f "feature_list.json" ]; then
-    error "feature_list.json already exists! Aborting to prevent overwrite."
+  if [ -f "blinder/feature_list.json" ]; then
+    error "blinder/feature_list.json already exists! Aborting to prevent overwrite."
   fi
 
   info "Initializing Blinder harness for project: $PROJECT_NAME"
 
-  # Create directories
   mkdir -p .claude/agents
-  mkdir -p .agents/agents
-  mkdir -p harness/prompts/roles
-  mkdir -p progress
-  mkdir -p specs
+  mkdir -p blinder/prompts/roles
+  mkdir -p blinder/progress
+  mkdir -p blinder/specs
   mkdir -p docs
 
-  # Copy docs and templates
-  cp "$BLINDER_ROOT/templates/docs/CLAUDE.md" "./CLAUDE.md"
-  cp "$BLINDER_ROOT/templates/docs/GEMINI.md" "./GEMINI.md"
-  cp "$BLINDER_ROOT/templates/docs/AGENTS.md" "./AGENTS.md"
-  cp "$BLINDER_ROOT/templates/docs/CHECKPOINTS.md" "./CHECKPOINTS.md"
-  cp "$BLINDER_ROOT/templates/docs/specs.md" "./docs/specs.md"
+  # Root entrypoints + navigation
+  cp "$BLINDER_ROOT/templates/docs/CLAUDE.md"   "./CLAUDE.md"
+  cp "$BLINDER_ROOT/templates/docs/AGENTS.md"   "./AGENTS.md"
+
+  # Project-fillable docs
   cp "$BLINDER_ROOT/templates/docs/architecture.md" "./docs/architecture.md"
-  cp "$BLINDER_ROOT/templates/docs/conventions.md" "./docs/conventions.md"
-  cp "$BLINDER_ROOT/templates/progress/current.md" "./progress/current.md"
-  cp "$BLINDER_ROOT/templates/progress/history.md" "./progress/history.md"
+  cp "$BLINDER_ROOT/templates/docs/conventions.md"  "./docs/conventions.md"
+  cp "$BLINDER_ROOT/templates/docs/specs.md"        "./docs/specs.md"
+
+  # Harness state + criteria + templates
+  cp "$BLINDER_ROOT/templates/docs/CHECKPOINTS.md"      "./blinder/CHECKPOINTS.md"
+  cp "$BLINDER_ROOT/templates/docs/decisions.md.tmpl"   "./blinder/prompts/decisions.template.md"
+  cp "$BLINDER_ROOT/templates/progress/current.md"      "./blinder/progress/current.md"
+  cp "$BLINDER_ROOT/templates/progress/history.md"      "./blinder/progress/history.md"
+  cp "$BLINDER_ROOT/templates/progress/roadmap.md"      "./blinder/roadmap.md"
+  cp "$BLINDER_ROOT/templates/init.sh"                  "./blinder/init.sh"
+  chmod +x "./blinder/init.sh"
+
+  # Hook config for Claude Code
   cp "$BLINDER_ROOT/templates/config/claude_settings.json" "./.claude/settings.json"
-  cp "$BLINDER_ROOT/templates/config/gemini_settings.json" "./.agents/settings.json"
-  cp "$BLINDER_ROOT/templates/init.sh" "./init.sh"
 
-  chmod +x "./init.sh"
+  # feature_list.json with project name
+  jq --arg name "$PROJECT_NAME" '.project = $name' \
+    "$BLINDER_ROOT/templates/config/feature_list.json" > "blinder/feature_list.json"
 
-  # Write customized feature_list.json
-  jq --arg name "$PROJECT_NAME" '.project = $name' "$BLINDER_ROOT/templates/config/feature_list.json" > "feature_list.json"
-
-  # Install agents using install_agents.sh helper
+  # Install role prompts + subagents
   bash "$BLINDER_ROOT/templates/install/install_agents.sh" "."
 
-  ok "Blinder harness initialized successfully!"
+  ok "Blinder harness initialized."
   info "Next steps:"
-  echo "  1. Review AGENTS.md for the agent layout."
-  echo "  2. Run ./init.sh to verify the environment."
-  echo "  3. Add a new feature with: blinder.sh new \"My feature\""
+  echo "  1. Fill docs/architecture.md and docs/conventions.md for your project."
+  echo "  2. Run: bash blinder/init.sh   (fast verification)"
+  echo "  3. Add a feature:  blinder.sh new \"My feature\""
+  echo "  4. Open Claude Code and say: \"Work the next pending feature.\""
 }
 
 cmd_new() {
-  if [ ! -f "feature_list.json" ]; then
-    error "feature_list.json not found. Please run 'blinder.sh init' first."
-  fi
+  require_jq
+  [ -f "blinder/feature_list.json" ] || error "blinder/feature_list.json not found. Run 'blinder.sh init' first."
+  [ $# -lt 1 ] && error "Missing feature title. Usage: blinder.sh new \"feature title\""
 
-  if [ $# -lt 1 ]; then
-    error "Missing feature title. Usage: blinder.sh new \"feature title\""
-  fi
-
-  TITLE="$1"
-  shift
-
+  TITLE="$1"; shift
   SDD=true
   DESC=""
   ACCEPTANCE_RAW=""
+  DEPENDS_RAW=""
+  EPIC=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --no-sdd)
-        SDD=false
-        shift
-        ;;
-      --sdd)
-        SDD=true
-        shift
-        ;;
-      --description)
-        DESC="$2"
-        shift 2
-        ;;
-      --acceptance)
-        ACCEPTANCE_RAW="$2"
-        shift 2
-        ;;
-      *)
-        error "Unknown argument: $1"
-        ;;
+      --no-sdd)       SDD=false; shift ;;
+      --sdd)          SDD=true; shift ;;
+      --description)  DESC="$2"; shift 2 ;;
+      --acceptance)   ACCEPTANCE_RAW="$2"; shift 2 ;;
+      --depends-on)   DEPENDS_RAW="$2"; shift 2 ;;
+      --epic)         EPIC="$2"; shift 2 ;;
+      *) error "Unknown argument: $1" ;;
     esac
   done
 
-  # Generate next ID FR-XXXX
-  MAX_NUM=$(jq '.features[].id' feature_list.json 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1 || true)
-  if [ -z "$MAX_NUM" ]; then
-    NEXT_NUM=1
-  else
-    NEXT_NUM=$((MAX_NUM + 1))
-  fi
-  ID=$(printf "FR-%04d" $NEXT_NUM)
-  NAME=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+  # Next ID
+  MAX_NUM=$(jq -r '.features[].id' blinder/feature_list.json 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1 || true)
+  NEXT_NUM=$([ -z "$MAX_NUM" ] && echo 1 || echo $((MAX_NUM + 1)))
+  ID=$(printf "FR-%04d" "$NEXT_NUM")
+  NAME=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_' | sed 's/^_//;s/_$//')
 
-  ACCEPTANCE_JSON="[]"
-  if [ -n "$ACCEPTANCE_RAW" ]; then
-    # Parse comma separated into JSON array
-    IFS=',' read -ra ADDR <<< "$ACCEPTANCE_RAW"
+  csv_to_json_array() {
+    local raw="$1" out="[]" item
+    [ -z "$raw" ] && { echo "$out"; return; }
+    IFS=',' read -ra ADDR <<< "$raw"
     for item in "${ADDR[@]}"; do
-      # strip leading/trailing whitespace
       item=$(echo "$item" | xargs)
-      ACCEPTANCE_JSON=$(echo "$ACCEPTANCE_JSON" | jq --arg item "$item" '. += [$item]')
+      [ -z "$item" ] && continue
+      out=$(echo "$out" | jq --arg i "$item" '. += [$i]')
     done
-  fi
+    echo "$out"
+  }
 
-  # Interactive prompt if stdin is a TTY and we don't have description/acceptance from arguments
+  ACCEPTANCE_JSON=$(csv_to_json_array "$ACCEPTANCE_RAW")
+  DEPENDS_JSON=$(csv_to_json_array "$DEPENDS_RAW")
+
+  # Interactive prompts only when nothing supplied and we have a TTY
   if [ -t 0 ] && [ -t 1 ] && [ -z "$DESC" ] && [ -z "$ACCEPTANCE_RAW" ]; then
-    echo -n "Enter feature description: "
-    read -r DESC
-    echo "Enter acceptance criteria (one per line, press enter on empty line to finish):"
+    echo -n "Description: "; read -r DESC
+    echo "Acceptance criteria (one per line, empty line to finish):"
     while true; do
-      echo -n "- "
-      read -r LINE
-      if [ -z "$LINE" ]; then
-        break
-      fi
-      ACCEPTANCE_JSON=$(echo "$ACCEPTANCE_JSON" | jq --arg item "$LINE" '. += [$item]')
+      echo -n "- "; read -r LINE
+      [ -z "$LINE" ] && break
+      ACCEPTANCE_JSON=$(echo "$ACCEPTANCE_JSON" | jq --arg i "$LINE" '. += [$i]')
     done
   fi
 
-  # Fallback for non-interactive or empty values
-  if [ -z "$DESC" ]; then
-    DESC="Implement $TITLE"
-  fi
-  if [ "$ACCEPTANCE_JSON" = "[]" ]; then
-    ACCEPTANCE_JSON="[\"Verify $TITLE is fully implemented and tested.\"]"
-  fi
+  [ -z "$DESC" ] && DESC="Implement $TITLE"
+  [ "$ACCEPTANCE_JSON" = "[]" ] && ACCEPTANCE_JSON="[\"Verify $TITLE is fully implemented and tested.\"]"
 
-  # Create the feature object
+  TS=$(now_utc)
   NEW_FEATURE=$(jq -n \
-    --arg id "$ID" \
-    --arg name "$NAME" \
-    --arg title "$TITLE" \
-    --arg desc "$DESC" \
-    --argjson sdd "$SDD" \
-    --argjson acceptance "$ACCEPTANCE_JSON" \
-    '{id: $id, name: $name, title: $title, description: $desc, sdd: $sdd, acceptance: $acceptance, status: "pending"}')
+    --arg id "$ID" --arg name "$NAME" --arg title "$TITLE" --arg desc "$DESC" \
+    --argjson sdd "$SDD" --argjson acceptance "$ACCEPTANCE_JSON" \
+    --argjson depends "$DEPENDS_JSON" --arg epic "$EPIC" --arg ts "$TS" \
+    '{id:$id, name:$name, title:$title, description:$desc, sdd:$sdd, epic:$epic,
+      acceptance:$acceptance, depends_on:$depends, status:"pending",
+      blocked_reason:null, created:$ts, updated:$ts}')
 
-  # Append to feature_list.json
-  TMP_FILE=$(mktemp)
-  jq --argjson new_feat "$NEW_FEATURE" '.features += [$new_feat]' feature_list.json > "$TMP_FILE"
-  mv "$TMP_FILE" feature_list.json
+  TMP=$(mktemp)
+  jq --argjson f "$NEW_FEATURE" '.features += [$f]' blinder/feature_list.json > "$TMP"
+  mv "$TMP" blinder/feature_list.json
 
-  ok "Created new feature: $ID ($TITLE)"
-  info "Feature details added to feature_list.json"
+  ok "Created $ID ($TITLE)"
+  if [ -n "$EPIC" ]; then info "Epic: $EPIC"; fi
+  if [ "$DEPENDS_JSON" != "[]" ]; then info "Depends on: $(echo "$DEPENDS_JSON" | jq -r 'join(", ")')"; fi
+}
+
+color_status() {
+  case "$1" in
+    pending)     printf "%s" "${YELLOW}pending${NC}" ;;
+    discussed)   printf "%s" "${CYAN}discussed${NC}" ;;
+    spec_ready)  printf "%s" "${BLUE}spec_ready${NC}" ;;
+    in_progress) printf "%s" "${CYAN}in_progress${NC}" ;;
+    implemented) printf "%s" "${BLUE}implemented${NC}" ;;
+    done)        printf "%s" "${GREEN}done${NC}" ;;
+    blocked)     printf "%s" "${RED}blocked${NC}" ;;
+    deferred)    printf "%s" "${GREY}deferred${NC}" ;;
+    *)           printf "%s" "$1" ;;
+  esac
+}
+
+print_feature_row() {
+  local feat="$1" FID FSTATUS FSDD FTITLE FDEPS FREASON PADDED COLORED
+  FID=$(echo "$feat"    | jq -r '.id')
+  FSTATUS=$(echo "$feat" | jq -r '.status')
+  FSDD=$(echo "$feat"   | jq -r '.sdd')
+  FTITLE=$(echo "$feat" | jq -r '.title')
+  FDEPS=$(echo "$feat"  | jq -r '(.depends_on // []) | join(",")')
+  FREASON=$(echo "$feat" | jq -r '.blocked_reason // empty')
+  [ -z "$FDEPS" ] && FDEPS="-"
+  # color_status emits invisible escape codes; pad the plain text first.
+  PADDED=$(printf "%-13s" "$FSTATUS")
+  COLORED=${PADDED/$FSTATUS/$(color_status "$FSTATUS")}
+  printf "%-9s | %b | %-4s | %-14s | %s\n" "$FID" "$COLORED" "$FSDD" "$FDEPS" "$FTITLE"
+  if [ -n "$FREASON" ]; then
+    printf "          %sreason: %s%s\n" "$GREY" "$FREASON" "$NC"
+  fi
 }
 
 cmd_status() {
-  if [ ! -f "feature_list.json" ]; then
-    error "feature_list.json not found. Please run 'blinder.sh init' first."
+  require_jq
+  [ -f "blinder/feature_list.json" ] || error "blinder/feature_list.json not found. Run 'blinder.sh init' first."
+
+  local FILE="blinder/feature_list.json"
+  local SEP="--------------------------------------------------------------------------------"
+  PROJECT_NAME=$(jq -r '.project' "$FILE")
+  echo "Project: ${GREEN}${PROJECT_NAME}${NC}"
+  echo "$SEP"
+  printf "%-9s | %-13s | %-4s | %-14s | %s\n" "ID" "STATUS" "SDD" "DEPENDS" "TITLE"
+  echo "$SEP"
+
+  # Group by epic only when epics are actually in use; otherwise render flat.
+  local N_EPICS
+  N_EPICS=$(jq '[.features[].epic // "" | select(. != "")] | unique | length' "$FILE")
+
+  if [ "$N_EPICS" -eq 0 ]; then
+    jq -c '.features[]' "$FILE" | while read -r feat; do print_feature_row "$feat"; done
+  else
+    # Non-empty epics first (sorted), then the no-epic bucket last.
+    jq -r '([.features[].epic // ""] | unique) as $e
+           | (($e | map(select(. != ""))) + ($e | map(select(. == ""))))
+           | .[]' "$FILE" | while IFS= read -r EPIC; do
+      if [ -z "$EPIC" ]; then
+        echo "${CYAN}▸ (no epic)${NC}"
+      else
+        echo "${CYAN}▸ ${EPIC}${NC}"
+      fi
+      jq -c --arg e "$EPIC" '.features[] | select((.epic // "") == $e)' "$FILE" \
+        | while read -r feat; do print_feature_row "$feat"; done
+    done
   fi
-
-  PROJECT_NAME=$(jq -r '.project' feature_list.json)
-  echo -e "Project: ${GREEN}$PROJECT_NAME${NC}"
-  echo -e "--------------------------------------------------------------------------------"
-  printf "%-10s | %-12s | %-4s | %-45s\n" "ID" "STATUS" "SDD" "TITLE"
-  echo -e "--------------------------------------------------------------------------------"
-
-  jq -c '.features[]' feature_list.json | while read -r feat; do
-    FID=$(echo "$feat" | jq -r '.id')
-    FSTATUS=$(echo "$feat" | jq -r '.status')
-    FSDD=$(echo "$feat" | jq -r '.sdd')
-    FTITLE=$(echo "$feat" | jq -r '.title')
-
-    # Colorize status
-    case "$FSTATUS" in
-      pending)
-        STATUS_COL="${YELLOW}pending${NC}"
-        ;;
-      spec_ready)
-        STATUS_COL="${BLUE}spec_ready${NC}"
-        ;;
-      in_progress)
-        STATUS_COL="${CYAN}in_progress${NC}"
-        ;;
-      done)
-        STATUS_COL="${GREEN}done${NC}"
-        ;;
-      blocked)
-        STATUS_COL="${RED}blocked${NC}"
-        ;;
-      *)
-        STATUS_COL="$FSTATUS"
-        ;;
-    esac
-
-    printf "%-10s | %-21s | %-4s | %-45s\n" "$FID" "$STATUS_COL" "$FSDD" "$FTITLE"
-  done
-  echo -e "--------------------------------------------------------------------------------"
+  echo "$SEP"
 }
 
-# Command router
-if [ $# -lt 1 ]; then
-  show_help
-  exit 1
-fi
+# Print the first feature that is actionable: not done/deferred/blocked and all
+# of its depends_on are done. Respects one_feature_at_a_time (an in_progress
+# feature is itself the actionable one).
+cmd_next() {
+  require_jq
+  [ -f "blinder/feature_list.json" ] || error "blinder/feature_list.json not found. Run 'blinder.sh init' first."
 
-CMD=$1
-shift
+  NEXT=$(jq -r '
+    . as $root
+    | ($root.features | map(select(.status=="done") | .id)) as $done
+    | $root.features
+    | map(select(.status != "done" and .status != "deferred" and .status != "blocked"))
+    | map(select((.depends_on // []) - $done | length == 0))
+    | (.[0] // empty)
+    | if . == null then "" else "\(.id)\t\(.status)\t\(.title)" end
+  ' blinder/feature_list.json)
 
+  if [ -z "$NEXT" ]; then
+    info "No actionable feature (all done/blocked/deferred, or dependencies unmet)."
+  else
+    printf "Next: ${GREEN}%s${NC}\n" "$(echo "$NEXT" | cut -f1)"
+    printf "  status: %b\n" "$(color_status "$(echo "$NEXT" | cut -f2)")"
+    printf "  title:  %s\n" "$(echo "$NEXT" | cut -f3)"
+  fi
+}
+
+[ $# -lt 1 ] && { show_help; exit 1; }
+CMD="$1"; shift
 case "$CMD" in
-  init)
-    cmd_init "$@"
-    ;;
-  new)
-    cmd_new "$@"
-    ;;
-  status)
-    cmd_status
-    ;;
-  help|--help|-h)
-    show_help
-    ;;
-  *)
-    error "Unknown command: $CMD. Run 'blinder.sh help' for usage."
-    ;;
+  init)            cmd_init "$@" ;;
+  new)             cmd_new "$@" ;;
+  status)          cmd_status ;;
+  next)            cmd_next ;;
+  help|--help|-h)  show_help ;;
+  *)               error "Unknown command: $CMD. Run 'blinder.sh help'." ;;
 esac

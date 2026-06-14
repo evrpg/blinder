@@ -6,8 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./init.sh 2>&1 | tail -5",
-            "description": "After editing or writing files, run init.sh verification and show summary."
+            "command": "bash blinder/init.sh 2>&1 | tail -8",
+            "description": "Fast verification after edits: structural checks + feature_list.json validity + at-most-one in_progress + compile/typecheck. Full test suite runs only at the review gate (blinder/init.sh --full)."
           }
         ]
       }

@@ -1,76 +1,35 @@
 #!/usr/bin/env bash
-# templates/install/install_agents.sh — Installs/updates agents in a project directory
+# install_agents.sh — Install/update Blinder role prompts + Claude subagents.
+#
+# Single source of truth: templates/prompts/roles/*.md
+#   - discussion.md  : main-thread role the Leader follows (no subagent frontmatter)
+#   - spec_author.md : subagent (has Claude frontmatter)
+#   - implementer.md : subagent (has Claude frontmatter)
+#   - reviewer.md    : subagent (has Claude frontmatter)
+#
+# Subagent prompts are copied verbatim into .claude/agents/ (Claude Code reads
+# frontmatter + body from there). All role prompts are also mirrored into
+# blinder/prompts/roles/ so the harness is self-documenting and portable.
 
 set -euo pipefail
 
 TARGET_DIR="${1:-.}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BLINDER_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+ROLES_DIR="$BLINDER_ROOT/templates/prompts/roles"
 
-echo "Installing/updating agent files in: $TARGET_DIR"
+echo "Installing Claude subagents + role prompts into: $TARGET_DIR"
 
-# Dirs to create
 mkdir -p "$TARGET_DIR/.claude/agents"
-mkdir -p "$TARGET_DIR/.agents/agents"
-mkdir -p "$TARGET_DIR/harness/prompts/roles"
+mkdir -p "$TARGET_DIR/blinder/prompts/roles"
 
-SHARED_TEMPLATES_DIR="$BLINDER_ROOT/templates/agents/shared"
-CLAUDE_TEMPLATES_DIR="$BLINDER_ROOT/templates/agents/claude"
-GEMINI_TEMPLATES_DIR="$BLINDER_ROOT/templates/agents/gemini"
+# Mirror every role prompt for reference/portability.
+cp "$ROLES_DIR"/*.md "$TARGET_DIR/blinder/prompts/roles/"
 
-# 1. Copy shared instructions
-cp "$SHARED_TEMPLATES_DIR"/*.md "$TARGET_DIR/harness/prompts/roles/"
-
-# 2. Build Claude Agents (Frontmatter + Shared Prompts)
-for agent in leader spec_author implementer reviewer; do
-  TARGET_FILE="$TARGET_DIR/.claude/agents/$agent.md"
-  cat "$CLAUDE_TEMPLATES_DIR/$agent.md" > "$TARGET_FILE"
-  echo "" >> "$TARGET_FILE"
-  cat "$SHARED_TEMPLATES_DIR/$agent.md" >> "$TARGET_FILE"
+# Install the three subagents Claude Code can dispatch.
+for agent in spec_author implementer reviewer; do
+  cp "$ROLES_DIR/$agent.md" "$TARGET_DIR/.claude/agents/$agent.md"
 done
 
-# 3. Build Antigravity (Gemini) Agents (Compile Frontmatter + Shared Prompts into agent.json)
-for agent in leader spec_author implementer reviewer; do
-  # Initialize variables
-  AGENT_NAME=""
-  AGENT_DESC=""
-  ENABLE_WRITE_TOOLS=false
-  ENABLE_MCP_TOOLS=false
-  ENABLE_SUBAGENT_TOOLS=false
-  
-  # Read frontmatter from GEMINI_TEMPLATES_DIR/$agent.md
-  while IFS= read -r line; do
-    if [[ "$line" =~ ^---$ ]]; then
-      continue
-    fi
-    
-    if [[ "$line" =~ ^name:[[:space:]]*(.*)$ ]]; then
-      AGENT_NAME="${BASH_REMATCH[1]}"
-    elif [[ "$line" =~ ^description:[[:space:]]*(.*)$ ]]; then
-      AGENT_DESC="${BASH_REMATCH[1]}"
-    elif [[ "$line" =~ ^enable_write_tools:[[:space:]]*(.*)$ ]]; then
-      ENABLE_WRITE_TOOLS="${BASH_REMATCH[1]}"
-    elif [[ "$line" =~ ^enable_mcp_tools:[[:space:]]*(.*)$ ]]; then
-      ENABLE_MCP_TOOLS="${BASH_REMATCH[1]}"
-    elif [[ "$line" =~ ^enable_subagent_tools:[[:space:]]*(.*)$ ]]; then
-      ENABLE_SUBAGENT_TOOLS="${BASH_REMATCH[1]}"
-    fi
-  done < "$GEMINI_TEMPLATES_DIR/$agent.md"
-
-  # Create individual agent subdirectory
-  AGENT_SUBDIR="$TARGET_DIR/.agents/agents/$agent"
-  mkdir -p "$AGENT_SUBDIR"
-  
-  # Compile agent.json
-  jq -n \
-    --arg name "$AGENT_NAME" \
-    --arg desc "$AGENT_DESC" \
-    --argjson enable_write_tools "$ENABLE_WRITE_TOOLS" \
-    --argjson enable_mcp_tools "$ENABLE_MCP_TOOLS" \
-    --argjson enable_subagent_tools "$ENABLE_SUBAGENT_TOOLS" \
-    --rawfile system_prompt "$SHARED_TEMPLATES_DIR/$agent.md" \
-    '{name: $name, description: $desc, system_prompt: $system_prompt, enable_write_tools: $enable_write_tools, enable_mcp_tools: $enable_mcp_tools, enable_subagent_tools: $enable_subagent_tools}' \
-    > "$AGENT_SUBDIR/agent.json"
-done
-
-echo "Agent installation complete."
+echo "Done. Subagents: spec_author, implementer, reviewer."
+echo "Leader + discussion run on the main thread (see CLAUDE.md)."

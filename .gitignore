@@ -14,7 +14,5 @@ __pycache__/
 .coverage
 htmlcov/
 
-# CLI Local Caches
-.claude/
-.gemini/
-.agents/
+# Claude Code local caches (relevant inside scaffolded projects)
+.claude/settings.local.json

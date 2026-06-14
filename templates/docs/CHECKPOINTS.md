@@ -1,30 +1,35 @@
-# CHECKPOINTS — Final state evaluation
+# CHECKPOINTS — Final-state evaluation
 
-> In multi-agent systems you don't evaluate the journey, you evaluate the
-> destination. These are objective checkpoints a judge (human or AI) can use
-> to decide if the project is healthy.
+> In a multi-agent flow you evaluate the destination, not the journey. These are
+> objective checks a human or the reviewer uses to decide a feature is healthy.
 
-## C1 — The harness is complete
+## C1 — Harness is intact
 
-- [ ] All base files exist: `AGENTS.md`, `init.sh`, `feature_list.json`,
-      `progress/current.md`
-- [ ] All docs exist: `docs/architecture.md`, `docs/conventions.md`,
-      `docs/specs.md`
-- [ ] `./init.sh` exits with code 0
+- [ ] Base files exist: `AGENTS.md`, `CLAUDE.md`, `blinder/init.sh`,
+      `blinder/feature_list.json`, `blinder/progress/current.md`
+- [ ] Project docs exist: `docs/architecture.md`, `docs/conventions.md`, `docs/specs.md`
+- [ ] `bash blinder/init.sh --full` exits 0
 
 ## C2 — State is coherent
 
-- [ ] At most one feature is `in_progress` in `feature_list.json`
-- [ ] Every `done` feature has associated tests that pass
-- [ ] `progress/current.md` is empty or describes the active session
+- [ ] At most one feature is `in_progress`
+- [ ] The feature under review has all four spec files + `decisions.md`
+- [ ] `blinder/progress/current.md` describes the active session (or is idle)
+- [ ] Any `blocked`/`deferred` feature has a recorded reason
 
-## C3 — Code respects architecture
+## C3 — Decisions were honored
 
-- [ ] `src/` only contains modules described in `docs/architecture.md`
+- [ ] Every locked `D<n>` in `decisions.md` is reflected by a requirement or design choice
+- [ ] No silent scope added beyond the spec
+
+## C4 — Code respects architecture & conventions
+
+- [ ] Changed files match `docs/architecture.md` (layers/structure)
+- [ ] Changed files match `docs/conventions.md` (style/naming/errors)
 - [ ] No stray debug prints or contextless TODOs
 
-## C4 — Verification is real
+## C5 — Verification is real (TDD)
 
-- [ ] `tests/` has at least one test per `done` feature
-- [ ] All tests pass when running the project's test command
-- [ ] Every `R<n>` from specs has a traceable test
+- [ ] Every `R<n>` has at least one traceable test (see `review.md`)
+- [ ] Reviewer added edge/negative/boundary tests
+- [ ] All tests pass under `blinder/init.sh --full`
