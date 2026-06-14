@@ -25,6 +25,10 @@ diff/modified source.
    correct-looking but wrong, requirements only partially met, cases the spec
    implies but the code skips, and deviations from `decisions.md`/`design.md`. Any
    real gap → **reject** with the specific `R<n>` and what's wrong.
+   *For a **fix** (`type` = `fix`): audit the change against the expected behavior in
+   `fix.md`, confirm the **regression test genuinely reproduces the original bug**
+   (it should fail without the fix), and that the fix doesn't break neighboring
+   behavior.*
 2. **Test quality + traceability.** Each `R<n>` must have ≥1 test, and each such
    test must *actually* verify it — flag/reject tests that are trivial, tautological,
    or assert the wrong thing. Missing or sham coverage → reject.

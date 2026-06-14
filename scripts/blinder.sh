@@ -33,9 +33,11 @@ Blinder — Claude-native Spec-Driven Development harness
 
 Usage:
   blinder.sh init   [--name "project-name"]
-  blinder.sh new    "feature title" [--description "..."] [--acceptance "a, b, c"]
-                    [--depends-on "FR-0001,FR-0002"] [--epic "name"] [--no-sdd]
+  blinder.sh new    "title" [--description "..."] [--acceptance "a, b, c"]
+                    [--depends-on "FR-0001,FR-0002"] [--epic "name"]
+                    [--type feature|fix] [--fixes "FR-0001"] [--no-sdd]
   blinder.sh set    <FR-ID> <status> [--reason "..."]
+  blinder.sh log    "message"
   blinder.sh status
   blinder.sh next
   blinder.sh roadmap
@@ -43,9 +45,12 @@ Usage:
 
 Commands:
   init      Scaffold the harness into the current directory (Claude Code).
-  new       Register a new feature in blinder/feature_list.json (assigns FR-XXXX).
+  new       Register a tracked unit of work (assigns FR-XXXX). --type fix marks a
+            fix (lighter flow); --fixes links it to the feature(s) it repairs.
   set       Transition a feature's status (validates value, enforces one in_progress,
             bumps 'updated', sets/clears blocked_reason). Use this — never hand-edit JSON.
+  log       Append a one-line entry to history.md for a small change too minor to
+            be a tracked feature/fix (the "chore" lane). No unit, no cycle.
   status    Print a dashboard of all features, their state and dependencies.
   next      Print the next actionable feature (deps satisfied), or nothing.
   roadmap   Regenerate blinder/roadmap.md (a human-readable board) from feature_list.json.
@@ -137,6 +142,8 @@ cmd_new() {
   ACCEPTANCE_RAW=""
   DEPENDS_RAW=""
   EPIC=""
+  TYPE="feature"
+  FIXES_RAW=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --no-sdd)       SDD=false; shift ;;
@@ -145,9 +152,17 @@ cmd_new() {
       --acceptance)   ACCEPTANCE_RAW="$2"; shift 2 ;;
       --depends-on)   DEPENDS_RAW="$2"; shift 2 ;;
       --epic)         EPIC="$2"; shift 2 ;;
+      --type)         TYPE="$2"; shift 2 ;;
+      --fixes)        FIXES_RAW="$2"; shift 2 ;;
       *) error "Unknown argument: $1" ;;
     esac
   done
+
+  case "$TYPE" in
+    feature|fix) ;;
+    chore) error "Chores aren't tracked units. Record one with: blinder.sh log \"message\"" ;;
+    *) error "Invalid --type '$TYPE' (feature|fix)" ;;
+  esac
 
   # Next ID
   MAX_NUM=$(jq -r '.features[].id' blinder/feature_list.json 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1 || true)
@@ -169,6 +184,7 @@ cmd_new() {
 
   ACCEPTANCE_JSON=$(csv_to_json_array "$ACCEPTANCE_RAW")
   DEPENDS_JSON=$(csv_to_json_array "$DEPENDS_RAW")
+  FIXES_JSON=$(csv_to_json_array "$FIXES_RAW")
 
   # Interactive prompts only when nothing supplied and we have a TTY
   if [ -t 0 ] && [ -t 1 ] && [ -z "$DESC" ] && [ -z "$ACCEPTANCE_RAW" ]; then
@@ -188,10 +204,11 @@ cmd_new() {
   NEW_FEATURE=$(jq -n \
     --arg id "$ID" --arg name "$NAME" --arg title "$TITLE" --arg desc "$DESC" \
     --argjson sdd "$SDD" --argjson acceptance "$ACCEPTANCE_JSON" \
-    --argjson depends "$DEPENDS_JSON" --arg epic "$EPIC" --arg ts "$TS" \
-    '{id:$id, name:$name, title:$title, description:$desc, sdd:$sdd, epic:$epic,
-      acceptance:$acceptance, depends_on:$depends, status:"pending",
-      blocked_reason:null, created:$ts, updated:$ts}')
+    --argjson depends "$DEPENDS_JSON" --arg epic "$EPIC" --arg type "$TYPE" \
+    --argjson fixes "$FIXES_JSON" --arg ts "$TS" \
+    '{id:$id, name:$name, title:$title, description:$desc, type:$type, sdd:$sdd,
+      epic:$epic, acceptance:$acceptance, depends_on:$depends, fixes:$fixes,
+      status:"pending", blocked_reason:null, created:$ts, updated:$ts}')
 
   TMP=$(mktemp)
   jq --argjson f "$NEW_FEATURE" '.features += [$f]' blinder/feature_list.json > "$TMP"
@@ -199,6 +216,8 @@ cmd_new() {
   write_roadmap
 
   ok "Created $ID ($TITLE)"
+  if [ "$TYPE" != "feature" ]; then info "Type: $TYPE"; fi
+  if [ "$FIXES_JSON" != "[]" ]; then info "Fixes: $(echo "$FIXES_JSON" | jq -r 'join(", ")')"; fi
   if [ -n "$EPIC" ]; then info "Epic: $EPIC"; fi
   if [ "$DEPENDS_JSON" != "[]" ]; then info "Depends on: $(echo "$DEPENDS_JSON" | jq -r 'join(", ")')"; fi
 }
@@ -364,7 +383,7 @@ write_roadmap() {
     if [ "$(jq '.features | length' "$F")" -eq 0 ]; then
       echo '_No features yet. Add one: `blinder/cli.sh new "title"`._'
     else
-      jq -r '"_\(.features|length) features — " + ([.features[].status] | group_by(.) | map("\(.[0]): \(length)") | join(", ")) + "_"' "$F"
+      jq -r '"_\(.features|length) items — " + ([.features[].status] | group_by(.) | map("\(.[0]): \(length)") | join(", ")) + "_"' "$F"
       echo ""
       jq -r '([.features[].epic // ""] | unique) as $e
              | (($e | map(select(. != ""))) + ($e | map(select(. == ""))))
@@ -372,10 +391,10 @@ write_roadmap() {
       | while IFS= read -r EPIC; do
           if [ -z "$EPIC" ]; then echo "## (no epic)"; else echo "## Epic: $EPIC"; fi
           echo ""
-          echo "| Feature | Status | Depends on | Title | Description |"
-          echo "|---------|--------|------------|-------|-------------|"
+          echo "| Feature | Type | Status | Depends on | Title | Description |"
+          echo "|---------|------|--------|------------|-------|-------------|"
           jq -r --arg e "$EPIC" '.features[] | select((.epic // "") == $e)
-            | "| \(.id) | \(.status) | \(((.depends_on // []) | if length == 0 then "—" else join(", ") end)) | \(.title) | \(.description // "") |"' "$F"
+            | "| \(.id) | \(.type // "feature") | \(.status) | \(((.depends_on // []) | if length == 0 then "—" else join(", ") end)) | \(.title) | \(if ((.fixes // []) | length) > 0 then "fixes " + ((.fixes) | join(",")) + " — " else "" end)\(.description // "") |"' "$F"
           echo ""
         done
     fi
@@ -389,12 +408,23 @@ cmd_roadmap() {
   ok "Regenerated blinder/roadmap.md"
 }
 
+# Record a small change (the "chore" lane) without creating a tracked unit. Appends
+# a timestamped line to history.md. For changes too minor to warrant feature/fix flow.
+cmd_log() {
+  [ $# -lt 1 ] && error "Usage: blinder.sh log \"message\""
+  [ -d "blinder/progress" ] || error "blinder/progress not found. Run 'blinder.sh init' first."
+  local MSG="$1" TS; TS=$(now_utc)
+  printf -- '- `[chore]` %s — %s\n' "$TS" "$MSG" >> blinder/progress/history.md
+  ok "Logged to blinder/progress/history.md"
+}
+
 [ $# -lt 1 ] && { show_help; exit 1; }
 CMD="$1"; shift
 case "$CMD" in
   init)            cmd_init "$@" ;;
   new)             cmd_new "$@" ;;
   set)             cmd_set "$@" ;;
+  log)             cmd_log "$@" ;;
   status)          cmd_status ;;
   next)            cmd_next ;;
   roadmap)         cmd_roadmap ;;

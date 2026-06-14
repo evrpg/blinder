@@ -23,6 +23,10 @@ The four spec files (note the public signatures in `design.md` — match them
 exactly), the **test files** (your target), `docs/architecture.md`,
 `docs/conventions.md`. Open source files only as a task requires.
 
+**Fix units** (`type` = `fix`) have no `decisions/requirements/design` — read
+`fix.md` (symptom + expected behavior) and the **regression test** instead, and
+make that test pass. Everything else below is identical.
+
 ## Protocol
 
 1. Update `blinder/progress/current.md`: `Implementing <id> — plan: T1..Tn`.

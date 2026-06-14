@@ -14,7 +14,7 @@
 
 | Path | Contains | Read it when |
 |------|----------|--------------|
-| `blinder/cli.sh` | Vendored CLI — `new` / `set` / `status` / `next` / `roadmap` (run `bash blinder/cli.sh …`) | Registering features; changing status; checking state |
+| `blinder/cli.sh` | Vendored CLI — `new` / `set` / `log` / `status` / `next` / `roadmap` (run `bash blinder/cli.sh …`) | Registering work; changing status; logging chores; checking state |
 | `blinder/feature_list.json` | Feature list: status, deps, sdd flag | At start |
 | `blinder/progress/current.md` | Current session state (small) | At start |
 | `blinder/progress/history.md` | Append-only log of closed features | Only for historical context |
@@ -50,6 +50,17 @@ pending → [discussion] → discussed → [spec_author: spec + tests] → spec_
        → implemented → [reviewer: audit + harden] → done
        (blocked / deferred reachable any time, with a recorded reason)
 ```
+
+## Lanes (right-size the process)
+
+| Lane | When | Flow |
+|------|------|------|
+| **feature** | net-new behavior, design choices | full loop above |
+| **fix** (`--type fix --fixes FR-X`) | something `done` is broken | skip discussion → `spec_author` writes `fix.md` + a failing regression test → approve → implement → review |
+| **chore** (`cli.sh log "…"`) | no behavior change, known + localized edit | the Leader edits it directly + logs; no unit, no subagent |
+
+Anything that touches logic/behavior is at least a **fix**. See `CLAUDE.md`
+"Classify the request first".
 
 ## Task status legend (in `tasks.md`)
 

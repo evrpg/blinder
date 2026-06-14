@@ -33,18 +33,39 @@ is discarded on return — this keeps your context lean and cheap):
 - `implementer` — makes the pre-written tests pass, task by task (tests read-only).
 - `reviewer` — audits code vs spec + hardens tests + full suite → verdict.
 
-## Routing
+## Classify the request first
+
+Right-size the process to the change. Decide which lane a request belongs to:
+
+- **Feature** — net-new behavior, or a non-trivial change with design choices →
+  `bash blinder/cli.sh new "title" …`, run the full per-feature loop below.
+- **Fix** — something already `done` is wrong/broken → `bash blinder/cli.sh new
+  "title" --type fix --fixes FR-X`, run the **fix flow** (lighter; below).
+- **Chore** — *no* behavior change and you can make the edit from what you already
+  know, in a file or two (typo, rename, docs, config, formatting) → **edit it
+  yourself**, run `bash blinder/init.sh` (fast), then `bash blinder/cli.sh log
+  "what changed"`. Do **not** dispatch a subagent for this.
+- **Unsure / borderline** → ask via `AskUserQuestion`: feature, fix to FR-X, or a
+  quick logged chore?
+
+**Guardrail:** the chore lane is *only* for changes you can make without going to
+read the codebase, and that don't touch logic/behavior. If you'd need to investigate
+where/how to change something, it is **not** a chore — make it a fix or feature and
+dispatch (so the reading happens in a disposable subagent context, not yours).
+Anything that changes behavior is at least a **fix** (regression-test-first).
+
+## Routing (features & fixes)
 
 **First:** if the human brings an initiative / a pile of ideas / says "plan", or the
 backlog is empty and there's a large goal, run the **Planner** (macro) to split it
-into features before entering the per-feature loop below. Planning only populates
-the backlog — it does not implement.
+into features. Planning only populates the backlog — it does not implement.
 
-Then act on the first non-`done`/`deferred` feature whose deps are met:
+Then act on the first non-`done`/`deferred` unit whose deps are met:
 
-| Feature status | Your action |
-|----------------|-------------|
-| `pending` | Run the **discussion** phase yourself (ask via `AskUserQuestion`, write `decisions.md`, set `discussed`), then **continue without stopping** to the `discussed` step below. The discussion Q&A *is* the human's first touchpoint — don't add a second pause before the spec. |
+| Status | Your action |
+|--------|-------------|
+| `pending` · **feature** | Run the **discussion** phase yourself (ask via `AskUserQuestion`, write `decisions.md`, set `discussed`), then **continue without stopping** to `discussed`. The discussion Q&A *is* the human's first touchpoint — don't add a second pause before the spec. |
+| `pending` · **fix** | **Skip discussion.** Dispatch **spec_author** in fix-mode → it writes `fix.md` (what's broken + expected behavior) and a **failing regression test**, sets `spec_ready`. Present it and **stop at the approval gate**. |
 | `discussed` | Dispatch **spec_author** → it writes the spec **and the failing tests**, sets `spec_ready`. Present the spec + tests and **stop at the approval gate** (the one hard stop before code). |
 | `spec_ready` + human approved | `bash blinder/cli.sh set <id> in_progress`; dispatch **implementer**. |
 | `spec_ready` + human requests changes | Do **not** implement. Amend per "Amending at the approval gate" below, then re-present and wait for approval again. |

@@ -65,6 +65,13 @@ tests are an independent oracle:
 
 A feature cannot reach `done` with a red suite (`rules.require_tests_to_close`).
 
+**Fixes** (`--type fix`) follow a lighter version of the same idea: they skip
+discussion, and `spec_author` writes `fix.md` (symptom + expected behavior) plus a
+**failing regression test** instead of the full spec; the implementer makes that
+test pass; the reviewer audits the change. Genuinely small, non-behavioral changes
+skip the cycle entirely and are recorded with `blinder/cli.sh log` (the chore lane).
+See `CLAUDE.md` "Classify the request first".
+
 ## EARS quick reference (for `requirements.md`)
 
 | Type | Template |
