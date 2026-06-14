@@ -97,7 +97,7 @@ A large initiative is therefore just an **epic-tagged chain of features** linked
 ## Install
 
 ```bash
-git clone https://github.com/<you>/blinder.git
+git clone https://github.com/evrpg/blinder.git
 # optional: add a convenience alias to your shell profile
 echo 'alias blinder="'"$PWD"'/blinder/scripts/blinder.sh"' >> ~/.bashrc
 ```
