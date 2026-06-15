@@ -22,20 +22,12 @@ warn() { printf "${YELLOW}[WARN]${NC}  %s\n" "$1"; }
 
 EXIT_CODE=0
 
-# ── PROJECT-SPECIFIC (edit me) ─────────────────────────────────────────────
-# Fill these in once you know the real commands for THIS project. When set, a
-# command OVERRIDES the generic auto-detection below — making the check exact and
-# fast instead of guessed. Leave empty to keep auto-detection.
-#
-# Agents (implementer/reviewer): when you learn the project's true build/test
-# command, set it here so every future run is precise. The harness gets sharper
-# the more it is used.
-#
-#   PROJECT_COMPILE_CMD="./gradlew compileKotlin -q"
-#   PROJECT_TEST_CMD="./gradlew test -q"
+# Project verification config. Defaults are empty (auto-detect); a project overrides
+# them in blinder/verify.env (project-owned — not overwritten on upgrade). When set, a
+# command replaces the generic auto-detection below for that tier.
 PROJECT_COMPILE_CMD=""   # runs on every check (fast tier)
 PROJECT_TEST_CMD=""      # runs only with --full
-# ───────────────────────────────────────────────────────────────────────────
+[ -f blinder/verify.env ] && . blinder/verify.env
 
 # Detect Python by a manifest OR the presence of any .py source.
 HAS_PYTHON=false

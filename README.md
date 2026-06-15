@@ -139,6 +139,7 @@ which is what lets the Planner call it from a non-interactive agent shell.
 | Command | Description |
 |---------|-------------|
 | `blinder init [--name N]` | Scaffold the harness into the current directory (source CLI). |
+| `blinder upgrade [--dry-run]` | Refresh harness-owned files in an existing project; preserves your state, specs, and tuning (source CLI; clean git tree). |
 | `bash blinder/cli.sh new "title" [opts]` | Register a tracked unit (`--type fix --fixes FR-X` for a fix); assigns the next `FR-XXXX` id. |
 | `bash blinder/cli.sh status` | Dashboard of all features — state, deps, blocked reasons — grouped by epic. |
 | `bash blinder/cli.sh next` | Print the next actionable feature (all dependencies satisfied). |
@@ -170,8 +171,9 @@ my-app/
     │   ├── specs.md          # the SDD process reference
     │   └── CHECKPOINTS.md    # objective done-criteria
     ├── feature_list.json     # canonical state: features, status, deps, epics
-    ├── cli.sh                # vendored CLI (new/set/log/status/next/roadmap)
-    ├── init.sh               # tiered verification (fast / --full); project-owned, self-tunes
+    ├── cli.sh                # vendored CLI (new/set/log/status/next/roadmap/upgrade)
+    ├── init.sh               # tiered verification (fast / --full) — harness-owned
+    ├── verify.env            # project-owned build/test tuning (survives upgrade)
     ├── roadmap.md            # generated board of feature_list.json (cli.sh roadmap)
     ├── prompts/
     │   ├── decisions.template.md

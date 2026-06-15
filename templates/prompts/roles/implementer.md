@@ -56,4 +56,4 @@ make that test pass. Everything else below is identical.
   improvise scope.
 - **Keep the harness sharp.** If you learn the project's real compile/test command
   (or auto-detection is wrong/slow), set `PROJECT_COMPILE_CMD` / `PROJECT_TEST_CMD`
-  in `blinder/init.sh`.
+  in `blinder/verify.env` (project-owned; survives `blinder upgrade`).

@@ -28,6 +28,7 @@
 | `blinder/docs/conventions.md` | Coding & commit conventions | Before writing code |
 | `blinder/docs/specs.md` | The SDD process (discussion → spec → TDD → review) | Before touching a spec |
 | `blinder/docs/CHECKPOINTS.md` | Objective done-criteria | During review |
+| `blinder/verify.env` | Project-owned build/test commands (`PROJECT_COMPILE_CMD`/`PROJECT_TEST_CMD`) | When you learn the real build/test command |
 | `docs/` (root) | **Your** space — seeds & on-demand snapshots (not maintained); see `docs/README.md` | When seeding a plan or generating a snapshot |
 | `blinder/prompts/roles/*.md` | The role prompts | Reference |
 

@@ -81,6 +81,6 @@ diff/modified source.
 
 ## Keep the harness sharp
 
-If `blinder/init.sh` mis-detected the build/test command or ran the wrong thing,
-fix it by setting `PROJECT_COMPILE_CMD` / `PROJECT_TEST_CMD` in that file so future
-verification is exact and fast.
+If verification mis-detected the build/test command or ran the wrong thing, fix it by
+setting `PROJECT_COMPILE_CMD` / `PROJECT_TEST_CMD` in `blinder/verify.env`
+(project-owned; survives `blinder upgrade`) so future runs are exact and fast.

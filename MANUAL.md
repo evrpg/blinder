@@ -124,8 +124,9 @@ my-app/
     │   ├── specs.md          # the SDD process reference
     │   └── CHECKPOINTS.md    # objective done-criteria
     ├── feature_list.json     # state: features, status, deps
-    ├── cli.sh                # vendored CLI (new/set/log/status/next/roadmap)
-    ├── init.sh               # tiered verification (fast / --full); project-owned, self-tunes
+    ├── cli.sh                # vendored CLI (new/set/log/status/next/roadmap/upgrade)
+    ├── init.sh               # tiered verification (fast / --full) — harness-owned
+    ├── verify.env            # PROJECT-OWNED build/test tuning (survives upgrade)
     ├── roadmap.md            # GENERATED board of feature_list.json (cli.sh roadmap)
     ├── prompts/
     │   ├── decisions.template.md
@@ -317,18 +318,46 @@ that work and the rework loop is costing more than a better model would.
   test`, `pytest`/`unittest`, `cargo test`, `go test`, `gradle test`).
 
 **Make it exact per project.** Auto-detection is a generic default. Once you know
-the real commands for *this* project, set them at the top of `blinder/init.sh`:
+the real commands for *this* project, set them in **`blinder/verify.env`** (a
+project-owned file that `init.sh` sources):
 
 ```bash
 PROJECT_COMPILE_CMD="./gradlew compileKotlin -q"   # fast tier
 PROJECT_TEST_CMD="./gradlew test -q"               # --full only
 ```
 
-When set, a command **overrides all auto-detection** for that tier — the check
-becomes precise and fast instead of guessed. The `init.sh` lives inside each
-project, so it is yours to evolve, and the `implementer`/`reviewer` roles are told
-to fill these in when they discover the true commands — so the harness sharpens
-itself the more you use Blinder.
+When set, a command **overrides all auto-detection** for that tier — precise and fast
+instead of guessed. The tuning lives in `verify.env` (not `init.sh`) so that
+`blinder upgrade` can refresh the verification framework without losing it. The
+`implementer`/`reviewer` roles fill these in when they discover the true commands, so
+the harness sharpens itself the more you use Blinder.
+
+---
+
+## 9.5. Upgrading a project to a newer harness
+
+Pull harness improvements into an existing project with the **source** CLI (it needs
+the templates; the vendored `blinder/cli.sh` can't self-upgrade):
+
+```bash
+cd my-project
+git status                       # upgrade requires a clean tree (it's reversible via git)
+blinder upgrade --dry-run        # preview exactly what would change
+blinder upgrade                  # apply
+git diff                         # review; then: bash blinder/init.sh
+```
+
+It **refreshes** the harness-owned files (`CLAUDE.md`, `AGENTS.md`, `cli.sh`,
+`init.sh`, role prompts/subagents, `blinder/docs/specs.md` + `CHECKPOINTS.md`,
+`decisions.template.md`), **preserves** everything project-owned (`feature_list.json`,
+`specs/`, `progress/`, `blinder/docs/architecture.md` + `conventions.md`,
+`blinder/verify.env`, your root `docs/`, `.claude/settings.json`, `src/`/`tests/`),
+and **regenerates** `roadmap.md`. It stamps `blinder/.version`.
+
+Notes: it refuses on a dirty git tree (commit/stash first — that's your undo). Schema
+changes are kept backward-compatible, so no data migration is needed; a structural
+**layout** change (rare — like an older project that predates `blinder/docs/`) is
+called out in the release notes and done by hand.
 
 ---
 

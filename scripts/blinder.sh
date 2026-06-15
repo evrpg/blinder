@@ -3,6 +3,8 @@
 
 set -euo pipefail
 
+BLINDER_VERSION="0.4.0"
+
 # Find script directory and root directory of blinder installation
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BLINDER_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -27,6 +29,16 @@ require_jq() {
   command -v jq >/dev/null 2>&1 || error "jq is required but not installed. Install jq and retry."
 }
 
+# init/upgrade need the template library; the vendored blinder/cli.sh does not have it.
+require_templates() {
+  [ -d "$BLINDER_ROOT/templates" ] || error "This command needs the source blinder CLI (it reads templates). Run it via the repo path or alias, e.g. /path/to/blinder/scripts/blinder.sh $1 — not the vendored blinder/cli.sh."
+}
+
+stamp_version() {
+  local sha; sha=$(git -C "$BLINDER_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+  printf 'blinder %s (%s) %s\n' "$BLINDER_VERSION" "$sha" "$(now_utc)" > blinder/.version
+}
+
 show_help() {
   cat <<EOF
 Blinder — Claude-native Spec-Driven Development harness
@@ -41,10 +53,14 @@ Usage:
   blinder.sh status
   blinder.sh next
   blinder.sh roadmap
+  blinder.sh upgrade [--dry-run]
   blinder.sh help
 
 Commands:
   init      Scaffold the harness into the current directory (Claude Code).
+  upgrade   Refresh the harness-owned files in an existing project from current
+            templates (preserves feature_list, specs, init.sh tuning, your docs).
+            Run from the project root via the source CLI; needs a clean git tree.
   new       Register a tracked unit of work (assigns FR-XXXX). --type fix marks a
             fix (lighter flow); --fixes links it to the feature(s) it repairs.
   set       Transition a feature's status (validates value, enforces one in_progress,
@@ -109,12 +125,15 @@ cmd_init() {
   cp "$BLINDER_ROOT/templates/init.sh"                  "./blinder/init.sh"
   chmod +x "./blinder/init.sh"
 
-  # Vendor the CLI so feature management works in-project without a global install
-  # or shell alias (agents run non-interactively). This is a disposable snapshot —
-  # safe to overwrite on a harness upgrade. (init.sh is kept separate: it is
-  # project-owned and tuned via PROJECT_COMPILE_CMD/PROJECT_TEST_CMD.)
+  # Project-owned verification config (PROJECT_COMPILE_CMD/PROJECT_TEST_CMD). Kept
+  # separate from init.sh so `blinder upgrade` can refresh init.sh without losing tuning.
+  cp "$BLINDER_ROOT/templates/verify.env"               "./blinder/verify.env"
+
+  # Vendor the CLI so feature management works in-project without a global install or
+  # shell alias (agents run non-interactively). Disposable snapshot — refreshed on upgrade.
   cp "$BLINDER_ROOT/scripts/blinder.sh"                 "./blinder/cli.sh"
   chmod +x "./blinder/cli.sh"
+  stamp_version
 
   # Hook config for Claude Code
   cp "$BLINDER_ROOT/templates/config/claude_settings.json" "./.claude/settings.json"
@@ -422,6 +441,67 @@ cmd_log() {
   ok "Logged to blinder/progress/history.md"
 }
 
+# Refresh the harness-owned files in an existing project from the current templates,
+# while preserving everything project-owned. Run from the project root via the SOURCE
+# CLI (needs templates). Gated on a clean git tree; --dry-run previews the plan.
+cmd_upgrade() {
+  require_jq
+  require_templates upgrade
+  [ -f "blinder/feature_list.json" ] || error "Not a blinder project (no blinder/feature_list.json)."
+
+  local DRY=false
+  [ "${1:-}" = "--dry-run" ] && DRY=true
+
+  # dest::source pairs — harness-owned files that are safe to overwrite.
+  local REFRESH=(
+    "CLAUDE.md::templates/docs/CLAUDE.md"
+    "AGENTS.md::templates/docs/AGENTS.md"
+    "blinder/docs/specs.md::templates/docs/specs.md"
+    "blinder/docs/CHECKPOINTS.md::templates/docs/CHECKPOINTS.md"
+    "blinder/prompts/decisions.template.md::templates/docs/decisions.md.tmpl"
+    "blinder/init.sh::templates/init.sh"
+    "blinder/cli.sh::scripts/blinder.sh"
+  )
+
+  if [ "$DRY" = true ]; then
+    info "Dry run — no changes will be made."
+  elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    [ -n "$(git status --porcelain)" ] && error "Working tree is dirty. Commit or stash first — upgrade overwrites harness files; a clean tree keeps it reversible. (Preview with --dry-run.)"
+  else
+    warn "Not a git repo — upgrade won't be easily reversible. Consider 'git init' first."
+  fi
+
+  echo "── Refresh (harness-owned, overwritten) ──"
+  local pair dest src
+  for pair in "${REFRESH[@]}"; do
+    dest="${pair%%::*}"; src="${pair##*::}"
+    echo "  $dest"
+    if [ "$DRY" = false ]; then mkdir -p "$(dirname "$dest")"; cp "$BLINDER_ROOT/$src" "$dest"; fi
+  done
+  echo "  blinder/prompts/roles/* + .claude/agents/* (role prompts)"
+  [ "$DRY" = false ] && bash "$BLINDER_ROOT/templates/install/install_agents.sh" "." >/dev/null
+  if [ ! -f blinder/verify.env ]; then
+    echo "  blinder/verify.env (missing — will be created from template)"
+    [ "$DRY" = false ] && cp "$BLINDER_ROOT/templates/verify.env" blinder/verify.env
+  fi
+
+  echo "── Preserve (untouched) ──"
+  echo "  feature_list.json · specs/ · progress/ · docs/architecture.md · docs/conventions.md"
+  echo "  blinder/verify.env · root docs/ · .claude/settings.json · src/ & tests/"
+  echo "── Regenerate ── blinder/roadmap.md"
+
+  if [ "$DRY" = true ]; then
+    info "Dry run complete. Re-run without --dry-run to apply (commit any changes first)."
+    return 0
+  fi
+
+  chmod +x blinder/init.sh blinder/cli.sh
+  write_roadmap
+  stamp_version
+  ok "Upgraded — $(cat blinder/.version)"
+  info "Review with 'git diff', then verify: bash blinder/init.sh"
+}
+
 [ $# -lt 1 ] && { show_help; exit 1; }
 CMD="$1"; shift
 case "$CMD" in
@@ -432,6 +512,7 @@ case "$CMD" in
   status)          cmd_status ;;
   next)            cmd_next ;;
   roadmap)         cmd_roadmap ;;
+  upgrade)         cmd_upgrade "$@" ;;
   help|--help|-h)  show_help ;;
   *)               error "Unknown command: $CMD. Run 'blinder.sh help'." ;;
 esac
