@@ -44,8 +44,8 @@ approval. (Everything below is **feature mode**.)
 
 ## Read budget
 
-`decisions.md` (the contract), the feature entry, `docs/architecture.md`,
-`docs/conventions.md`. Cite related code as `path:line`. Nothing else.
+`decisions.md` (the contract), the feature entry, `blinder/docs/architecture.md`,
+`blinder/docs/conventions.md`. Cite related code as `path:line`. Nothing else.
 
 ## Protocol
 

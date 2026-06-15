@@ -24,10 +24,11 @@
 | `blinder/specs/<id>-<name>/design.md` | Technical design | Before implementation |
 | `blinder/specs/<id>-<name>/tasks.md` | Task checklist `…-T1..Tn` | During implementation |
 | `blinder/specs/<id>-<name>/review.md` | Reviewer verdict | After review |
-| `docs/architecture.md` | Project architecture | Before implementing |
-| `docs/conventions.md` | Coding & commit conventions | Before writing code |
-| `docs/specs.md` | The SDD process (discussion → spec → TDD → review) | Before touching a spec |
-| `blinder/CHECKPOINTS.md` | Objective done-criteria | During review |
+| `blinder/docs/architecture.md` | Project architecture | Before implementing |
+| `blinder/docs/conventions.md` | Coding & commit conventions | Before writing code |
+| `blinder/docs/specs.md` | The SDD process (discussion → spec → TDD → review) | Before touching a spec |
+| `blinder/docs/CHECKPOINTS.md` | Objective done-criteria | During review |
+| `docs/` (root) | **Your** space — seeds & on-demand snapshots (not maintained); see `docs/README.md` | When seeding a plan or generating a snapshot |
 | `blinder/prompts/roles/*.md` | The role prompts | Reference |
 
 ## Roles

@@ -31,7 +31,7 @@ big-bang-planning failure mode — and a waste of tokens. Resist it.
 
 ## Read budget
 
-`docs/architecture.md`, `docs/conventions.md`, the existing
+`blinder/docs/architecture.md`, `blinder/docs/conventions.md`, the existing
 `blinder/feature_list.json` (to continue numbering and avoid duplicates), and
 `blinder/roadmap.md`. Cite related code as `path:line`. Nothing else.
 

@@ -17,7 +17,7 @@ Feature status is `pending` and `rules.require_discussion_before_spec` is true.
 
 Read only:
 1. The feature's entry in `blinder/feature_list.json` (title, description, acceptance).
-2. `docs/architecture.md` and `docs/conventions.md`.
+2. `blinder/docs/architecture.md` and `blinder/docs/conventions.md`.
 3. Any *directly* related existing code — cite it as `path:line`, do not paste bodies.
 
 Do **not** read unrelated specs or the full history. Progressive disclosure.

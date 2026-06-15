@@ -46,7 +46,8 @@ fi
 
 echo "── 1. Harness files ───────────────────────────────────"
 for f in AGENTS.md CLAUDE.md blinder/feature_list.json blinder/progress/current.md \
-         docs/architecture.md docs/conventions.md docs/specs.md blinder/CHECKPOINTS.md; do
+         blinder/docs/architecture.md blinder/docs/conventions.md blinder/docs/specs.md \
+         blinder/docs/CHECKPOINTS.md; do
   if [ -f "$f" ]; then ok "exists $f"; else fail "missing $f"; EXIT_CODE=1; fi
 done
 

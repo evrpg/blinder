@@ -13,8 +13,8 @@ You do NOT change feature/application code — only tests and the review verdict
 
 ## Read budget
 
-`requirements.md`, `tasks.md`, `decisions.md`, `design.md`, `docs/architecture.md`,
-`docs/conventions.md`, `blinder/CHECKPOINTS.md`, the test files, and the
+`requirements.md`, `tasks.md`, `decisions.md`, `design.md`, `blinder/docs/architecture.md`,
+`blinder/docs/conventions.md`, `blinder/docs/CHECKPOINTS.md`, the test files, and the
 diff/modified source.
 
 ## Protocol
@@ -39,9 +39,9 @@ diff/modified source.
    where relevant). If a test you add legitimately fails, that is a defect → reject
    with the failing case named. (You may edit/add tests; you may not edit `src/`.)
 5. **Conventions & architecture.** Spot-check modified files against
-   `docs/conventions.md` and `docs/architecture.md`.
+   `blinder/docs/conventions.md` and `blinder/docs/architecture.md`.
 6. **Full verification.** Run `bash blinder/init.sh --full`. It must exit 0.
-7. **Checkpoints.** Walk `blinder/CHECKPOINTS.md`; note pass/fail per item.
+7. **Checkpoints.** Walk `blinder/docs/CHECKPOINTS.md`; note pass/fail per item.
 
 ## Output — `blinder/specs/<id>-<name>/review.md`
 

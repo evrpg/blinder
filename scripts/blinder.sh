@@ -83,6 +83,7 @@ cmd_init() {
   info "Initializing Blinder harness for project: $PROJECT_NAME"
 
   mkdir -p .claude/agents
+  mkdir -p blinder/docs
   mkdir -p blinder/prompts/roles
   mkdir -p blinder/progress
   mkdir -p blinder/specs
@@ -92,13 +93,16 @@ cmd_init() {
   cp "$BLINDER_ROOT/templates/docs/CLAUDE.md"   "./CLAUDE.md"
   cp "$BLINDER_ROOT/templates/docs/AGENTS.md"   "./AGENTS.md"
 
-  # Project-fillable docs
-  cp "$BLINDER_ROOT/templates/docs/architecture.md" "./docs/architecture.md"
-  cp "$BLINDER_ROOT/templates/docs/conventions.md"  "./docs/conventions.md"
-  cp "$BLINDER_ROOT/templates/docs/specs.md"        "./docs/specs.md"
+  # Harness reference docs (project-fillable inputs + methodology + criteria)
+  cp "$BLINDER_ROOT/templates/docs/architecture.md" "./blinder/docs/architecture.md"
+  cp "$BLINDER_ROOT/templates/docs/conventions.md"  "./blinder/docs/conventions.md"
+  cp "$BLINDER_ROOT/templates/docs/specs.md"        "./blinder/docs/specs.md"
+  cp "$BLINDER_ROOT/templates/docs/CHECKPOINTS.md"  "./blinder/docs/CHECKPOINTS.md"
 
-  # Harness state + criteria + templates
-  cp "$BLINDER_ROOT/templates/docs/CHECKPOINTS.md"      "./blinder/CHECKPOINTS.md"
+  # Root docs/ is the user's space (seeds + on-demand snapshots) — see its README
+  cp "$BLINDER_ROOT/templates/docs/root_docs_readme.md" "./docs/README.md"
+
+  # Templates
   cp "$BLINDER_ROOT/templates/docs/decisions.md.tmpl"   "./blinder/prompts/decisions.template.md"
   cp "$BLINDER_ROOT/templates/progress/current.md"      "./blinder/progress/current.md"
   cp "$BLINDER_ROOT/templates/progress/history.md"      "./blinder/progress/history.md"
@@ -125,7 +129,7 @@ cmd_init() {
 
   ok "Blinder harness initialized."
   info "Next steps:"
-  echo "  1. Fill docs/architecture.md and docs/conventions.md for your project."
+  echo "  1. Fill blinder/docs/architecture.md and blinder/docs/conventions.md for your project."
   echo "  2. Run: bash blinder/init.sh        (fast verification)"
   echo "  3. Add a feature:  bash blinder/cli.sh new \"My feature\""
   echo "  4. Open Claude Code and say: \"Work the next pending feature.\""

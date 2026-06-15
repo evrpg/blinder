@@ -7,7 +7,7 @@
 
 - [ ] Base files exist: `AGENTS.md`, `CLAUDE.md`, `blinder/init.sh`,
       `blinder/feature_list.json`, `blinder/progress/current.md`
-- [ ] Project docs exist: `docs/architecture.md`, `docs/conventions.md`, `docs/specs.md`
+- [ ] Project docs exist: `blinder/docs/architecture.md`, `blinder/docs/conventions.md`, `blinder/docs/specs.md`
 - [ ] `bash blinder/init.sh --full` exits 0
 
 ## C2 — State is coherent
@@ -24,8 +24,8 @@
 
 ## C4 — Code respects architecture & conventions
 
-- [ ] Changed files match `docs/architecture.md` (layers/structure)
-- [ ] Changed files match `docs/conventions.md` (style/naming/errors)
+- [ ] Changed files match `blinder/docs/architecture.md` (layers/structure)
+- [ ] Changed files match `blinder/docs/conventions.md` (style/naming/errors)
 - [ ] No stray debug prints or contextless TODOs
 
 ## C5 — Verification is real

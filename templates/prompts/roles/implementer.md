@@ -20,8 +20,8 @@ makes them pass, task by task. You do **not** write or change tests.
 ## Read budget
 
 The four spec files (note the public signatures in `design.md` — match them
-exactly), the **test files** (your target), `docs/architecture.md`,
-`docs/conventions.md`. Open source files only as a task requires.
+exactly), the **test files** (your target), `blinder/docs/architecture.md`,
+`blinder/docs/conventions.md`. Open source files only as a task requires.
 
 **Fix units** (`type` = `fix`) have no `decisions/requirements/design` — read
 `fix.md` (symptom + expected behavior) and the **regression test** instead, and
@@ -50,7 +50,7 @@ make that test pass. Everything else below is identical.
   `current.md`, and **stop / escalate to the Leader** (who routes it back to
   `spec_author`). The only exception is adding a project-level test fixture the
   conventions require (e.g. a `conftest.py` path shim) — never a change to assertions.
-- Follow `docs/conventions.md` (style, naming, errors) and `docs/architecture.md`
+- Follow `blinder/docs/conventions.md` (style, naming, errors) and `blinder/docs/architecture.md`
   (layers, structure) strictly. Match `design.md` signatures exactly.
 - If the spec itself is wrong or incomplete, stop and report to the Leader — do not
   improvise scope.

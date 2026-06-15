@@ -115,7 +115,7 @@ mkdir my-app && cd my-app && git init
 blinder init --name "my-app"          # or: /path/to/blinder/scripts/blinder.sh init
 
 # 3. Fill in the two docs the agents read before coding
-$EDITOR docs/architecture.md docs/conventions.md
+$EDITOR blinder/docs/architecture.md blinder/docs/conventions.md
 
 # 4. Baseline commit
 git add . && git commit -m "chore: scaffold blinder harness"
@@ -158,18 +158,20 @@ when you bring an initiative.
 my-app/
 ├── CLAUDE.md                 # Leader instructions (loaded every Claude Code session)
 ├── AGENTS.md                 # Navigation map for agents
-├── docs/
-│   ├── architecture.md       # YOU fill this in
-│   ├── conventions.md        # YOU fill this in
-│   └── specs.md              # the SDD process reference
+├── docs/                     # YOURS: seeds + on-demand snapshots (not maintained)
+│   └── README.md             # what this folder is for
 ├── .claude/
 │   ├── settings.json         # PostToolUse hook → fast verification after edits
 │   └── agents/               # spec_author · implementer · reviewer (subagents)
 └── blinder/
+    ├── docs/                 # harness reference (agents read these)
+    │   ├── architecture.md   # YOU fill this in
+    │   ├── conventions.md    # YOU fill this in
+    │   ├── specs.md          # the SDD process reference
+    │   └── CHECKPOINTS.md    # objective done-criteria
     ├── feature_list.json     # canonical state: features, status, deps, epics
-    ├── cli.sh                # vendored CLI (new/status/next); runs in-project, no alias needed
+    ├── cli.sh                # vendored CLI (new/set/log/status/next/roadmap)
     ├── init.sh               # tiered verification (fast / --full); project-owned, self-tunes
-    ├── CHECKPOINTS.md        # objective done-criteria
     ├── roadmap.md            # generated board of feature_list.json (cli.sh roadmap)
     ├── prompts/
     │   ├── decisions.template.md
