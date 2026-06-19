@@ -29,6 +29,25 @@ diff/modified source.
    `fix.md`, confirm the **regression test genuinely reproduces the original bug**
    (it should fail without the fix), and that the fix doesn't break neighboring
    behavior.*
+
+   **Optional — independent cross-model audit (Codex).** If a *different* model is
+   configured, run a second, independent code-vs-spec audit and reconcile it with
+   your own (it is *input*, not the verdict — you still decide):
+
+   ```bash
+   . blinder/verify.env 2>/dev/null || true
+   if [ "${REVIEWER_CODEX:-0}" = "1" ] && command -v codex >/dev/null 2>&1; then
+     codex exec "Audit the working-tree diff against the contract in \
+       blinder/specs/<id>-<name>/{requirements.md,decisions.md,design.md} \
+       (or fix.md for a fix). For each requirement R<n>, state whether the \
+       implementing code satisfies it on its own merits and name any gap. \
+       Do not run or trust the tests as the verdict; read-only, no edits."
+   fi
+   ```
+
+   Fold any *real* gaps Codex surfaces into the audit table below (attribute the
+   source). Disagreements are yours to settle by reading the code. If `REVIEWER_CODEX`
+   is unset/`0` or `codex` is absent, skip this silently — it is purely additive.
 2. **Test quality + traceability.** Each `R<n>` must have ≥1 test, and each such
    test must *actually* verify it — flag/reject tests that are trivial, tautological,
    or assert the wrong thing. Missing or sham coverage → reject.
