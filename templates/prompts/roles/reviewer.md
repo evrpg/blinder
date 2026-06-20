@@ -37,13 +37,15 @@ diff/modified source.
    ```bash
    . blinder/verify.env 2>/dev/null || true
    if [ "${REVIEWER_CODEX:-0}" = "1" ] && command -v codex >/dev/null 2>&1; then
-     codex exec "Audit the working-tree diff against the contract in \
-       blinder/specs/<id>-<name>/{requirements.md,decisions.md,design.md} \
-       (or fix.md for a fix). For each requirement R<n>, state whether the \
-       implementing code satisfies it on its own merits and name any gap. \
-       Do not run or trust the tests as the verdict; read-only, no edits."
+     codex exec --sandbox read-only --cd . "Audit the implementing code against the \
+       contract in blinder/specs/<id>-<name>/{requirements.md,decisions.md,design.md} \
+       (or fix.md for a fix). For each requirement R<n>, state whether the code in \
+       src/ satisfies it on its own merits and name any gap. Do not run or trust the \
+       tests as the verdict; read-only, no edits. Be concise." </dev/null
    fi
    ```
+   `--sandbox read-only` keeps Codex from editing (the audit is read-only by contract,
+   regardless of the project's codex config); `</dev/null` stops it waiting on stdin.
 
    Fold any *real* gaps Codex surfaces into the audit table below (attribute the
    source). Disagreements are yours to settle by reading the code. If `REVIEWER_CODEX`
