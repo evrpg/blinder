@@ -334,14 +334,15 @@ instead of guessed. The tuning lives in `verify.env` (not `init.sh`) so that
 the harness sharpens itself the more you use Blinder.
 
 **Optional — cross-model review.** `verify.env` also carries `REVIEWER_CODEX` (default
-`0`). Set it to `1` — and install [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc)
-so the `codex` CLI is on `PATH` — to have the `reviewer` run a *second, independent*
+`0`). Set it to `1` — and install the [Codex CLI](https://github.com/openai/codex)
+so the `codex` binary is on `PATH` — to have the `reviewer` run a *second, independent*
 code-vs-spec audit with a different model and reconcile its findings. It shells out to
-`codex exec` from inside the reviewer subagent (not the main-thread `/codex:review`
-slash command, which would pollute the Leader's context), pointed at the spec so the
-audit follows your `requirements.md`/`decisions.md`/`design.md`. The verdict stays the
-reviewer's. When unset or `codex` is absent, the pass is skipped silently — Claude-only
-review, no external dependency.
+`codex exec` from inside the reviewer subagent (deliberately **not** the main-thread
+`/codex:review` slash command, which can't be invoked from a subagent and would pollute
+the Leader's context), pointed at the spec so the audit follows your
+`requirements.md`/`decisions.md`/`design.md`. The verdict stays the reviewer's. When
+unset or `codex` is absent, the pass is skipped silently — Claude-only review, no
+external dependency.
 
 ---
 
@@ -389,9 +390,10 @@ browsers) to the agents. Reference those tools from your role prompts or
 
 **Cross-model review (Codex)** — the one extension that touches the SDD loop directly:
 the `reviewer` can run a second, independent code-vs-spec audit with a *different*
-model. Install [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) (so
-the `codex` CLI is on `PATH`) and set `REVIEWER_CODEX=1` in `blinder/verify.env`. Off
-by default; configured in §9.
+model via `codex exec` (not the `/codex:review` slash command — that can't run from a
+subagent). Install the [Codex CLI](https://github.com/openai/codex) (so the `codex`
+binary is on `PATH`) and set `REVIEWER_CODEX=1` in `blinder/verify.env`. Off by
+default; configured in §9.
 
 Keep these orthogonal to the harness: the SDD lifecycle doesn't change, you're just
 giving the agents more capabilities.

@@ -251,10 +251,13 @@ needs vary per project. Add them yourself:
   tools/data; reference those tools from your role prompts or `conventions.md`.
 - **Cross-model review (Codex):** the `reviewer` can run a second, independent
   code-vs-spec audit with a *different* model — set `REVIEWER_CODEX=1` in
-  `blinder/verify.env` and install [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc)
-  (its `codex` CLI must be on `PATH`). Off by default; when unset or `codex` is
-  absent the review stays Claude-only. The verdict, test-hardening, and full
-  verification remain the `reviewer`'s — Codex's findings are an input it reconciles.
+  `blinder/verify.env` and install the [Codex CLI](https://github.com/openai/codex)
+  (the `codex` binary must be on `PATH`). The reviewer calls `codex exec`
+  non-interactively from inside its own subagent — it does **not** use the
+  `/codex:review` slash command (that can't run from a subagent). Off by default;
+  when unset or `codex` is absent the review stays Claude-only. The verdict,
+  test-hardening, and full verification remain the `reviewer`'s — Codex's findings
+  are an input it reconciles.
 
 These are orthogonal to the SDD loop — you're just giving the agents more
 capabilities. See [MANUAL.md §10](./MANUAL.md).

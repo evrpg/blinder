@@ -149,21 +149,23 @@ real test suite + clear separation + a README note (see `docs/BACKLOG.md`).
 ## D15 — Optional cross-model reviewer (Codex)
 
 The reviewer can run a **second, independent code-vs-spec audit with a different model**
-(Codex, via the `codex-plugin-cc` CLI), gated on `REVIEWER_CODEX=1` in the project-owned
+(Codex, via the standalone `codex` CLI), gated on `REVIEWER_CODEX=1` in the project-owned
 `blinder/verify.env`. It is purely additive: the Blinder `reviewer` subagent stays the
 orchestrator and owner of the verdict, test-hardening, full verification, CHECKPOINTS,
 and state transitions; Codex's findings are *input* it reconciles, not the decision.
 
 **Why:** a different model widens the audit's blind spots — a natural extension of D6
 (the oracle should be independent of the code author) and D7 (model tiering) *across
-vendors*. **Why the `codex exec` CLI, inside the subagent — not the `/codex:review` slash
-command:** (1) plugin slash commands run only on the **main thread**, so using one would
-force the review into the **Leader's** context, defeating D3 (subagent contexts are
-discarded — the whole point of making review a subagent); shelling out via Bash keeps it
-inside the disposable reviewer context. (2) Plain `/codex:review` is diff-only,
-read-only, and takes no custom instructions, so it can't follow the spec or write the
-verdict — a CLI prompt **pointed at `requirements.md`/`decisions.md`/`design.md`** makes
-it spec-aware. **Why opt-in/off by default:** Blinder is otherwise bash + jq + Claude
+vendors*. **Why the standalone `codex exec` CLI, inside the subagent — not the
+`/codex:review` slash command** (the latter is what the `codex-plugin-cc` Claude Code
+plugin provides; we use the underlying CLI directly and do **not** depend on that
+plugin): (1) plugin slash commands run only on the **main thread**, so a subagent can't
+invoke one at all — and routing the review through the Leader would defeat D3 (subagent
+contexts are discarded — the whole point of making review a subagent); shelling out to
+`codex exec` via Bash keeps it inside the disposable reviewer context. (2) Plain
+`/codex:review` is diff-only, read-only, and takes no custom instructions, so it can't
+follow the spec or write the verdict — a CLI prompt **pointed at
+`requirements.md`/`decisions.md`/`design.md`** makes it spec-aware. **Why opt-in/off by default:** Blinder is otherwise bash + jq + Claude
 Code with zero runtime; Codex adds an external dependency (Node 18.18+, ChatGPT sub or
 OpenAI key). When the toggle is unset or `codex` isn't on PATH, the reviewer skips the
 pass silently — no behavior change, no new requirement for existing projects.
