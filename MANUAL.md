@@ -232,7 +232,8 @@ cycles.
 6. **Review.** The `reviewer` **audits the code against each requirement** (not just
    that tests are green), adds edge-case tests, runs `init.sh --full`, and writes
    `review.md`. If approved → `done` and appended to `history.md`; if rejected → back
-   to the implementer with notes.
+   to the implementer with notes. *(Optional: with `REVIEWER_CODEX=1` in `verify.env`,
+   it also runs an independent code-vs-spec audit with a different model — see §9.)*
 
 So per feature there are **two human touchpoints**: the discussion Q&A and the spec
 approval. You can stop after any phase and resume later — state is on disk.
@@ -332,6 +333,16 @@ instead of guessed. The tuning lives in `verify.env` (not `init.sh`) so that
 `implementer`/`reviewer` roles fill these in when they discover the true commands, so
 the harness sharpens itself the more you use Blinder.
 
+**Optional — cross-model review.** `verify.env` also carries `REVIEWER_CODEX` (default
+`0`). Set it to `1` — and install [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc)
+so the `codex` CLI is on `PATH` — to have the `reviewer` run a *second, independent*
+code-vs-spec audit with a different model and reconcile its findings. It shells out to
+`codex exec` from inside the reviewer subagent (not the main-thread `/codex:review`
+slash command, which would pollute the Leader's context), pointed at the spec so the
+audit follows your `requirements.md`/`decisions.md`/`design.md`. The verdict stays the
+reviewer's. When unset or `codex` is absent, the pass is skipped silently — Claude-only
+review, no external dependency.
+
 ---
 
 ## 9.5. Upgrading a project to a newer harness
@@ -375,6 +386,12 @@ to run a DB migration", "how to deploy to staging").
 Code's MCP settings) to expose external tools/data (databases, issue trackers,
 browsers) to the agents. Reference those tools from your role prompts or
 `conventions.md` if a phase should use them.
+
+**Cross-model review (Codex)** — the one extension that touches the SDD loop directly:
+the `reviewer` can run a second, independent code-vs-spec audit with a *different*
+model. Install [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) (so
+the `codex` CLI is on `PATH`) and set `REVIEWER_CODEX=1` in `blinder/verify.env`. Off
+by default; configured in §9.
 
 Keep these orthogonal to the harness: the SDD lifecycle doesn't change, you're just
 giving the agents more capabilities.
