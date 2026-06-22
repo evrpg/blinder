@@ -159,6 +159,13 @@ cmd_new() {
   [ -f "blinder/feature_list.json" ] || error "blinder/feature_list.json not found. Run 'blinder.sh init' first."
   [ $# -lt 1 ] && error "Missing feature title. Usage: blinder.sh new \"feature title\""
 
+  # A leading flag is almost always a mistake — without this guard, `new --help`
+  # (or any `-…` first arg) gets stored verbatim as the feature title.
+  case "$1" in
+    -h|--help|help) show_help; exit 0 ;;
+    -*) error "First argument must be the feature title, not a flag ('$1'). Usage: blinder.sh new \"feature title\" [flags]" ;;
+  esac
+
   TITLE="$1"; shift
   SDD=true
   DESC=""
@@ -189,7 +196,9 @@ cmd_new() {
 
   # Next ID
   MAX_NUM=$(jq -r '.features[].id' blinder/feature_list.json 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1 || true)
-  NEXT_NUM=$([ -z "$MAX_NUM" ] && echo 1 || echo $((MAX_NUM + 1)))
+  # 10# forces base-10: MAX_NUM is zero-padded (e.g. 0008), and a leading-zero literal
+  # in $(( )) is parsed as octal — 0008/0009 are invalid octal and abort the script.
+  NEXT_NUM=$([ -z "$MAX_NUM" ] && echo 1 || echo $((10#$MAX_NUM + 1)))
   ID=$(printf "FR-%04d" "$NEXT_NUM")
   NAME=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_' | sed 's/^_//;s/_$//')
 
