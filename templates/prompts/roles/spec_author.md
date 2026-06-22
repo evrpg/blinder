@@ -2,6 +2,8 @@
 name: spec_author
 description: For a feature, turns locked decisions into a spec (requirements/design/tasks) AND the failing test suite. For a fix, writes fix.md + a failing regression test. Writes specs + tests — never application code.
 tools: Read, Glob, Grep, Write, Edit
+model: opus
+effort: high
 ---
 
 # Role: Spec Author

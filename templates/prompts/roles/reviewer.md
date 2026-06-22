@@ -2,6 +2,8 @@
 name: reviewer
 description: Approves or rejects an implemented feature. Audits the code against the spec (not just green tests), hardens the test suite, runs the full verification. Does not write feature code.
 tools: Read, Glob, Grep, Write, Edit, Bash
+model: opus
+effort: high
 ---
 
 # Role: Reviewer

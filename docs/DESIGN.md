@@ -65,13 +65,22 @@ only makes it pass. **Alternatives considered:**
   approves, and needs no new state. The reviewer then **audits code vs spec directly**
   (green tests are an input, not the verdict).
 
-## D7 — Model tiering
+## D7 — Model (and effort) tiering
 
 Enabled by D6: strong model for **discussion / spec_author / reviewer** (judgment),
 mid model for the **implementer** (mechanical — make pre-written tests pass). **Why:**
 implementation is the highest-token phase, so making it the cheap one concentrates the
 savings, and it's safe because it's bracketed by two strong correctness gates. Set per
 subagent via `model:` frontmatter; main-thread roles use the session model.
+
+The role prompts now **ship these defaults** rather than leaving the frontmatter blank
+(blank inherited the session model, so everything silently ran as one tier): `opus` for
+`spec_author`/`reviewer`, `sonnet` for `implementer`. The same axis extends to reasoning
+**effort** via the `effort:` frontmatter field (`low`…`max`): `spec_author`/`reviewer`
+default to `high`. The implementer ships `model:` but no `effort:` — `xhigh`/`max` are
+Opus-class levels and would clamp on Sonnet, so raising implementer effort means moving
+it to `opus` first. These files are harness-owned (refreshed by `upgrade`), so per-project
+tuning must be re-applied after an upgrade.
 
 ## D8 — Three right-sized lanes (feature / fix / chore)
 

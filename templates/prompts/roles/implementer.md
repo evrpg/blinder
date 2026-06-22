@@ -2,6 +2,7 @@
 name: implementer
 description: Implements ONE approved feature so its pre-written test suite passes. Writes application code only — never edits the tests.
 tools: Read, Glob, Grep, Write, Edit, Bash
+model: sonnet
 ---
 
 # Role: Implementer

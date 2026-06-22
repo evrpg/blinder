@@ -276,17 +276,19 @@ These are baked into the prompts and tooling; good to know so you don't undo the
 
 ---
 
-## 8.5. Model tiering (optional, advanced)
+## 8.5. Model & effort tiering
 
 The roles split by how much **judgment** they need, which lets you spend a strong
-model where it matters and a cheaper one where the work is mechanical:
+model (and more reasoning effort) where it matters and a cheaper one where the work
+is mechanical. **Blinder ships these defaults** in the generated subagents — you no
+longer have to set them by hand:
 
-| Role | Judgment | Suggested model |
-|------|----------|-----------------|
-| leader / discussion / planner (main thread) | high (ambiguity, questions, routing) | **strong** |
-| spec_author (requirements + design + **tests**) | high (defines correctness) | **strong** |
-| reviewer (audits code vs spec) | high (correctness judgment) | **strong** |
-| implementer (make the pre-written tests pass) | low (mechanical execution) | **mid** |
+| Role | Judgment | Default `model:` | Default `effort:` |
+|------|----------|------------------|-------------------|
+| leader / discussion / planner (main thread) | high (ambiguity, questions, routing) | *session model* | *session effort* |
+| spec_author (requirements + design + **tests**) | high (defines correctness) | `opus` | `high` |
+| reviewer (audits code vs spec) | high (correctness judgment) | `opus` | `high` |
+| implementer (make the pre-written tests pass) | low (mechanical execution) | `sonnet` | *(inherits)* |
 
 This is why the test/implement split exists: with `spec_author` (strong) authoring
 the tests and the `reviewer` (strong) auditing the code, the **implementer can be a
@@ -294,13 +296,26 @@ cheaper model** and still be safe — it's bracketed by two strong correctness g
 and implementation is usually the highest-token phase, so that's where the savings
 concentrate.
 
-How to set it:
+How it's wired (and how to change it):
 
-- **Main-thread roles** (leader/discussion/planner) use whatever model you launched
-  the Claude Code session with — launch with the strong one.
-- **Subagents** take a `model:` line in their frontmatter at `.claude/agents/<role>.md`
-  (e.g. `model: sonnet`). Set `spec_author` and `reviewer` to a strong model and
-  `implementer` to a mid one; omit the line to inherit the session model.
+- **Main-thread roles** (leader/discussion/planner) can't be pinned — they use
+  whatever model **and** effort you launched the Claude Code session with, so launch
+  with the strong one.
+- **Subagents** carry a `model:` and (optionally) an `effort:` line in their
+  frontmatter at `.claude/agents/<role>.md`. `model:` accepts `opus`, `sonnet`,
+  `haiku`, `fable`, a full model ID (e.g. `claude-opus-4-8`), or `inherit`.
+  `effort:` accepts `low`, `medium`, `high`, `xhigh`, `max` and **overrides** the
+  session effort while that subagent runs.
+- These are the files you edit to tune it for a project; `blinder upgrade`
+  **refreshes** them back to the shipped defaults (they're harness-owned), so re-apply
+  local model/effort changes after an upgrade — or, better, change the source role
+  prompts if you maintain your own Blinder.
+
+> **Effort levels depend on the model.** `xhigh`/`max` are Opus-class levels; they
+> are not available on the Sonnet implementer, which is why the default implementer
+> sets `model:` but no `effort:`. If you want the implementer to reason harder (e.g.
+> `effort: xhigh`), switch its `model:` to `opus` first — otherwise the level is
+> clamped to what Sonnet supports.
 
 Cautions: don't pick the *weakest* model for the implementer (it still writes real
 logic and must match `design.md` signatures), and watch for repeated review
