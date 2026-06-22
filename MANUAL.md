@@ -366,6 +366,11 @@ It **refreshes** the harness-owned files (`CLAUDE.md`, `AGENTS.md`, `cli.sh`,
 `blinder/verify.env`, your root `docs/`, `.claude/settings.json`, `src/`/`tests/`),
 and **regenerates** `roadmap.md`. It stamps `blinder/.version`.
 
+Because `CLAUDE.md` and `AGENTS.md` are harness-owned and overwritten here, **don't
+store project knowledge in them** — anything you add is lost on the next upgrade. Put
+architecture in `blinder/docs/architecture.md`, conventions in `conventions.md`, and
+session state in `blinder/progress/current.md`; those are preserved.
+
 Notes: it refuses on a dirty git tree (commit/stash first — that's your undo). Schema
 changes are kept backward-compatible, so no data migration is needed; a structural
 **layout** change (rare — like an older project that predates `blinder/docs/`) is
