@@ -44,7 +44,7 @@
 |------|-----------|------|----------|
 | **leader** | main thread (`CLAUDE.md`) | Orchestrate; run planning/discussion/approval; dispatch subagents; update state | Write app code; skip gates |
 | **planner** | main thread | Split an initiative into features (thin); insert via `blinder/cli.sh new`; keep `roadmap.md` | Design or implement; lock per-feature detail |
-| **discussion** | main thread | Ask the human (`AskUserQuestion`); write `decisions.md` | Guess decisions |
+| **discussion** | main thread | Ask the human (interactive question tool — `AskUserQuestion` on Claude Code, else plain chat); write `decisions.md` | Guess decisions |
 | **spec_author** | subagent | Write requirements/design/tasks **and the failing test suite** from decisions | Write application code |
 | **implementer** | subagent | Make the pre-written tests pass, task by task | Edit tests; skip the spec; gold-plate |
 | **reviewer** | subagent | Audit code vs spec + harden tests + full suite | Edit feature code |

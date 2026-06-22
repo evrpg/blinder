@@ -38,8 +38,10 @@ location (per `conventions.md`) — they encode the requirements and start out r
 
 ## The two human touchpoints
 
-1. **Discussion** (start): the Leader asks questions via `AskUserQuestion` and
-   records answers in `decisions.md`. This is where ambiguity dies.
+1. **Discussion** (start): the Leader asks questions via your interactive
+   question tool (Claude Code: `AskUserQuestion`; OpenCode: its question tool —
+   otherwise plain conversation) and records answers in `decisions.md`. This is
+   where ambiguity dies.
 2. **Approval gate** (after `spec_ready`): the human reads the spec **and the
    tests** and says **"approved"** (or requests changes). Only then does
    implementation begin.
