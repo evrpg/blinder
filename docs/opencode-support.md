@@ -1,8 +1,10 @@
 # Plan: multi-agent target support (Claude Code + OpenCode)
 
-> Status: **planned, not started.** This is the agreed design for letting one Blinder
-> project be driven by Claude Code, OpenCode, or both. Companion to `DESIGN.md` (see the
-> proposed **D16** at the bottom). Persist of the discussion that produced it.
+> Status: **phases 0–5 implemented** on branch `implement-opencode` (local; not yet pushed).
+> Phase 6 (formalized smoke tests) and a live plugin-firing test remain. This is the agreed
+> design for letting one Blinder project be driven by Claude Code, OpenCode, or both. The
+> design is now recorded as **D16 in `DESIGN.md`** (the draft at the bottom of this file is
+> the source it was distilled from). Companion to `DESIGN.md`.
 
 ## Why
 
