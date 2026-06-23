@@ -44,7 +44,7 @@ show_help() {
 Blinder — Claude-native Spec-Driven Development harness
 
 Usage:
-  blinder.sh init   [--name "project-name"]
+  blinder.sh init   [--name "project-name"] [--agent claude|opencode|both]
   blinder.sh new    "title" [--description "..."] [--acceptance "a, b, c"]
                     [--depends-on "FR-0001,FR-0002"] [--epic "name"]
                     [--type feature|fix] [--fixes "FR-0001"] [--no-sdd]
@@ -57,7 +57,9 @@ Usage:
   blinder.sh help
 
 Commands:
-  init      Scaffold the harness into the current directory (Claude Code).
+  init      Scaffold the harness into the current directory. --agent picks the
+            target front-end(s): claude (default), opencode, or both. Persisted
+            in blinder/.agents.
   upgrade   Refresh the harness-owned files in an existing project from current
             templates (preserves feature_list, specs, init.sh tuning, your docs).
             Run from the project root via the source CLI; needs a clean git tree.
@@ -82,13 +84,26 @@ EOF
 
 cmd_init() {
   PROJECT_NAME=""
+  local AGENT="claude"
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --name) PROJECT_NAME="$2"; shift 2 ;;
+      --name)  PROJECT_NAME="$2"; shift 2 ;;
+      --agent) AGENT="$2"; shift 2 ;;
       *) error "Unknown argument: $1" ;;
     esac
   done
   require_jq
+
+  # Normalize the requested target into the canonical space-separated set written to
+  # blinder/.agents. `both` expands to the full set; the order is stable.
+  local AGENTS
+  case "$AGENT" in
+    claude)   AGENTS="claude" ;;
+    opencode) AGENTS="opencode" ;;
+    both)     AGENTS="claude opencode" ;;
+    *) error "Invalid --agent '$AGENT' (claude|opencode|both)" ;;
+  esac
+  agent_has() { case " $AGENTS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
   [ -z "$PROJECT_NAME" ] && PROJECT_NAME="$(basename "$(pwd)")"
 
@@ -96,18 +111,20 @@ cmd_init() {
     error "blinder/feature_list.json already exists! Aborting to prevent overwrite."
   fi
 
-  info "Initializing Blinder harness for project: $PROJECT_NAME"
+  info "Initializing Blinder harness for project: $PROJECT_NAME (agents: $AGENTS)"
 
-  mkdir -p .claude/agents
   mkdir -p blinder/docs
   mkdir -p blinder/prompts/roles
   mkdir -p blinder/progress
   mkdir -p blinder/specs
   mkdir -p docs
 
-  # Root entrypoints + navigation
-  cp "$BLINDER_ROOT/templates/docs/CLAUDE.md"   "./CLAUDE.md"
+  # AGENTS.md is the shared, always-loaded navigation map (every target reads it).
+  # CLAUDE.md is the Claude-specific entrypoint — emit it only for the Claude target.
   cp "$BLINDER_ROOT/templates/docs/AGENTS.md"   "./AGENTS.md"
+  if agent_has claude; then
+    cp "$BLINDER_ROOT/templates/docs/CLAUDE.md" "./CLAUDE.md"
+  fi
 
   # Harness reference docs (project-fillable inputs + methodology + criteria)
   cp "$BLINDER_ROOT/templates/docs/architecture.md" "./blinder/docs/architecture.md"
@@ -139,23 +156,33 @@ cmd_init() {
   chmod +x "./blinder/cli.sh"
   stamp_version
 
-  # Hook config for Claude Code
-  cp "$BLINDER_ROOT/templates/config/claude_settings.json" "./.claude/settings.json"
+  # Hook config for Claude Code (the verification PostToolUse hook). Claude target only.
+  if agent_has claude; then
+    mkdir -p .claude
+    cp "$BLINDER_ROOT/templates/config/claude_settings.json" "./.claude/settings.json"
+  fi
 
   # feature_list.json with project name (+ initial generated roadmap board)
   jq --arg name "$PROJECT_NAME" '.project = $name' \
     "$BLINDER_ROOT/templates/config/feature_list.json" > "blinder/feature_list.json"
   write_roadmap
 
-  # Install role prompts + subagents
-  bash "$BLINDER_ROOT/templates/install/install_agents.sh" "."
+  # Persist the selected target set (canonical project state; missing ⇒ claude).
+  echo "$AGENTS" > blinder/.agents
+
+  # Install role prompts + per-target subagents.
+  bash "$BLINDER_ROOT/templates/install/install_agents.sh" "." --agent "$AGENTS"
 
   ok "Blinder harness initialized."
   info "Next steps:"
   echo "  1. Fill blinder/docs/architecture.md and blinder/docs/conventions.md for your project."
   echo "  2. Run: bash blinder/init.sh        (fast verification)"
   echo "  3. Add a feature:  bash blinder/cli.sh new \"My feature\""
-  echo "  4. Open Claude Code and say: \"Work the next pending feature.\""
+  if agent_has claude; then
+    echo "  4. Open Claude Code and say: \"Work the next pending feature.\""
+  else
+    echo "  4. Open your agent (OpenCode) and say: \"Work the next pending feature.\""
+  fi
 }
 
 cmd_new() {
