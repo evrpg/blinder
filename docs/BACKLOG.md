@@ -7,11 +7,13 @@
 ## High value
 
 ### Automated test suite (`bats` + `shellcheck`)
-Blinder has **zero automated tests today** — every change has been verified by hand in
-`/tmp`. The repeated `set -e` + trailing-`&&` bugs and the cycle-detection jq scope bug
-would have been caught instantly by a suite.
+A first automated check now exists: **`tests/smoke.sh`** (pure bash, no live agent run)
+covers `bash -n`, the `claude`/`opencode`/`both` scaffolds, the OpenCode frontmatter
+transform, and `upgrade --agent` union/preserve behavior. Still missing: `shellcheck`, and
+behavioral coverage of the CLI invariants below (the repeated `set -e` + trailing-`&&` bugs
+and the cycle-detection jq scope bug would have been caught instantly by these).
 
-Plan (sketched, not built):
+Plan (smoke.sh is the start; the rest sketched, not built):
 - **shellcheck** gate over `scripts/blinder.sh`, `templates/init.sh`,
   `templates/install/install_agents.sh`.
 - **bats** behavioral tests in `tests/bats/`, one file per command + `init_sh.bats`,

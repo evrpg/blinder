@@ -23,22 +23,27 @@ that governs work here.
 
 ## Commands
 
-There is no automated test suite yet (DESIGN/BACKLOG: a `bats` + `shellcheck` suite is
-planned and would become the real test command). Verify changes manually:
+The fast automated check is **`bash tests/smoke.sh`** — a pure-bash scaffolding smoke
+suite (no live agent run): it `bash -n`s the shell sources, scaffolds `claude` /
+`opencode` / `both` into throwaway dirs, and asserts the per-target shell + the OpenCode
+frontmatter transform + `upgrade --agent` union/preserve behavior. Run it after any change
+to the CLI, templates, or `install_agents.sh`. (A fuller `bats` + `shellcheck` suite is
+still planned — DESIGN/BACKLOG.)
 
 ```bash
-# 1. Syntax-check the shell sources after any edit
-bash -n scripts/blinder.sh templates/init.sh templates/install/install_agents.sh
+# Fast: the scaffolding smoke suite (run from anywhere)
+bash tests/smoke.sh
 
-# 2. End-to-end smoke test: scaffold into a throwaway dir and exercise the CLI
-blinder=$(pwd)                         # run from the repo root first
+# Manual end-to-end (when you want to poke a scaffold by hand):
+bash -n scripts/blinder.sh templates/init.sh templates/install/install_agents.sh
+blinder=$(pwd)
 tmp=$(mktemp -d); ( cd "$tmp" && git init -q \
   && "$blinder/scripts/blinder.sh" init --name t \
   && bash blinder/cli.sh new "X" \
   && bash blinder/cli.sh status \
   && bash blinder/init.sh )            # the fast verification tier
 
-# 3. For upgrade changes: scaffold, commit, then preview / apply
+# For upgrade changes: scaffold, commit, then preview / apply
 ( cd "$tmp" && git add -A && git commit -qm baseline \
   && "$blinder/scripts/blinder.sh" upgrade --dry-run )
 ```
