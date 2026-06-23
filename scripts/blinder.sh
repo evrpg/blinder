@@ -115,6 +115,10 @@ cmd_init() {
   cp "$BLINDER_ROOT/templates/docs/specs.md"        "./blinder/docs/specs.md"
   cp "$BLINDER_ROOT/templates/docs/CHECKPOINTS.md"  "./blinder/docs/CHECKPOINTS.md"
 
+  # Shared, tool-neutral Leader orchestration body (CLAUDE.md @-imports it; other
+  # agent front-ends load it via their own config). Harness-owned; refreshed on upgrade.
+  cp "$BLINDER_ROOT/templates/docs/leader.md"       "./blinder/docs/leader.md"
+
   # Root docs/ is the user's space (seeds + on-demand snapshots) — see its README
   cp "$BLINDER_ROOT/templates/docs/root_docs_readme.md" "./docs/README.md"
 
@@ -465,6 +469,7 @@ cmd_upgrade() {
   local REFRESH=(
     "CLAUDE.md::templates/docs/CLAUDE.md"
     "AGENTS.md::templates/docs/AGENTS.md"
+    "blinder/docs/leader.md::templates/docs/leader.md"
     "blinder/docs/specs.md::templates/docs/specs.md"
     "blinder/docs/CHECKPOINTS.md::templates/docs/CHECKPOINTS.md"
     "blinder/prompts/decisions.template.md::templates/docs/decisions.md.tmpl"
