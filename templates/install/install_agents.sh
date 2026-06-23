@@ -52,10 +52,52 @@ install_claude_agents() {
   echo "  claude  → .claude/agents/: ${SUBAGENTS[*]}"
 }
 
-# opencode: transform the Claude-canonical frontmatter into .opencode/agents/*.md.
-# Implemented in Phase 3 (drop model/effort, inject `mode: subagent`, map tools→permission).
+# Transform a Claude-canonical subagent .md into OpenCode format on stdout:
+#   - drop `name:` (OpenCode derives the id from the filename), `model:`, `effort:`
+#     (D-3: OpenCode inherits the user's configured model — no per-role pinning)
+#   - inject `mode: subagent`
+#   - map the Claude `tools:` ALLOWLIST into a `permission:` block (the modern field;
+#     `tools:` is deprecated): a capability is `allow` iff its Claude tool is listed,
+#     else `deny`. Read-type tools (read/grep/glob/list) stay at OpenCode's default
+#     allow. We gate the meaningful ones: edit (file writes), bash, webfetch, websearch.
+#   - keep the prompt body verbatim.
+opencode_transform() {
+  awk '
+    NR==1 && $0=="---" { infm=1; next }
+    infm && $0=="---" {
+      infm=0
+      editp = (tools ~ /(^|[, ])(Edit|Write)([, ]|$)/) ? "allow" : "deny"
+      bashp = (tools ~ /(^|[, ])Bash([, ]|$)/)         ? "allow" : "deny"
+      wfp   = (tools ~ /(^|[, ])WebFetch([, ]|$)/)     ? "allow" : "deny"
+      wsp   = (tools ~ /(^|[, ])WebSearch([, ]|$)/)    ? "allow" : "deny"
+      print "---"
+      print "description: " desc
+      print "mode: subagent"
+      print "permission:"
+      print "  edit: " editp
+      print "  bash: " bashp
+      print "  webfetch: " wfp
+      print "  websearch: " wsp
+      print "---"
+      next
+    }
+    infm {
+      if ($0 ~ /^description:[ \t]*/) { d=$0; sub(/^description:[ \t]*/,"",d); desc=d }
+      if ($0 ~ /^tools:[ \t]*/)       { t=$0; sub(/^tools:[ \t]*/,"",t);       tools=t }
+      next
+    }
+    { print }
+  ' "$1"
+}
+
+# opencode: emit the transformed subagents into .opencode/agents/ (id = filename).
 install_opencode_agents() {
-  echo "  opencode → .opencode/agents/: pending (emitter added in a later step)"
+  mkdir -p "$TARGET_DIR/.opencode/agents"
+  local agent
+  for agent in "${SUBAGENTS[@]}"; do
+    opencode_transform "$ROLES_DIR/$agent.md" > "$TARGET_DIR/.opencode/agents/$agent.md"
+  done
+  echo "  opencode → .opencode/agents/: ${SUBAGENTS[*]} (model/effort dropped; tools→permission)"
 }
 
 if agent_has claude;   then install_claude_agents; fi

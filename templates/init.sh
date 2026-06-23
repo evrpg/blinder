@@ -53,6 +53,14 @@ done
 if agent_has claude; then
   if [ -f CLAUDE.md ]; then ok "exists CLAUDE.md"; else fail "missing CLAUDE.md"; EXIT_CODE=1; fi
 fi
+# OpenCode shell: entrypoint config, verify plugin, and the transformed subagents.
+if agent_has opencode; then
+  for f in opencode.json .opencode/plugins/blinder-verify.ts \
+           .opencode/agents/spec_author.md .opencode/agents/implementer.md \
+           .opencode/agents/reviewer.md; do
+    if [ -f "$f" ]; then ok "exists $f"; else fail "missing $f"; EXIT_CODE=1; fi
+  done
+fi
 
 echo ""
 echo "── 2. feature_list.json ───────────────────────────────"

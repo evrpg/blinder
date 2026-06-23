@@ -162,6 +162,14 @@ cmd_init() {
     cp "$BLINDER_ROOT/templates/config/claude_settings.json" "./.claude/settings.json"
   fi
 
+  # OpenCode entrypoint config + verification plugin. opencode.json is project-ownable
+  # (the user sets their model/provider there — D-3); the plugin is harness verify glue.
+  if agent_has opencode; then
+    cp "$BLINDER_ROOT/templates/config/opencode.json" "./opencode.json"
+    mkdir -p .opencode/plugins
+    cp "$BLINDER_ROOT/templates/config/blinder-verify.plugin.ts" "./.opencode/plugins/blinder-verify.ts"
+  fi
+
   # feature_list.json with project name (+ initial generated roadmap board)
   jq --arg name "$PROJECT_NAME" '.project = $name' \
     "$BLINDER_ROOT/templates/config/feature_list.json" > "blinder/feature_list.json"
