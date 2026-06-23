@@ -53,7 +53,7 @@ Usage:
   blinder.sh status
   blinder.sh next
   blinder.sh roadmap
-  blinder.sh upgrade [--dry-run]
+  blinder.sh upgrade [--dry-run] [--agent claude|opencode|both]
   blinder.sh help
 
 Commands:
@@ -63,6 +63,8 @@ Commands:
   upgrade   Refresh the harness-owned files in an existing project from current
             templates (preserves feature_list, specs, init.sh tuning, your docs).
             Run from the project root via the source CLI; needs a clean git tree.
+            --agent adds a target (union/add-only — grows blinder/.agents, never
+            removes); without it, the existing target set is refreshed as-is.
   new       Register a tracked unit of work (assigns FR-XXXX). --type fix marks a
             fix (lighter flow); --fixes links it to the feature(s) it repairs.
   set       Transition a feature's status (validates value, enforces one in_progress,
@@ -497,12 +499,39 @@ cmd_upgrade() {
   require_templates upgrade
   [ -f "blinder/feature_list.json" ] || error "Not a blinder project (no blinder/feature_list.json)."
 
-  local DRY=false
-  [ "${1:-}" = "--dry-run" ] && DRY=true
+  local DRY=false REQ_AGENT=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dry-run) DRY=true; shift ;;
+      --agent)   REQ_AGENT="$2"; shift 2 ;;
+      *) error "Unknown argument: $1" ;;
+    esac
+  done
 
-  # dest::source pairs — harness-owned files that are safe to overwrite.
+  # Resolve the target set. The existing set is canonical state (blinder/.agents);
+  # missing/empty ⇒ claude (covers projects scaffolded before multi-agent support).
+  # `--agent` is UNION / add-only (D-6): it can grow the set but never shrink it — a
+  # typo can't delete a working shell. Removing/switching a target stays a deliberate
+  # manual step (delete the shell dir + edit .agents; reversible via git).
+  local EXISTING want_claude=false want_opencode=false
+  EXISTING="$(cat blinder/.agents 2>/dev/null || true)"
+  [ -z "$EXISTING" ] && EXISTING="claude"
+  case " $EXISTING " in *" claude "*)   want_claude=true ;; esac
+  case " $EXISTING " in *" opencode "*) want_opencode=true ;; esac
+  case "$REQ_AGENT" in
+    "")       ;;
+    claude)   want_claude=true ;;
+    opencode) want_opencode=true ;;
+    both)     want_claude=true; want_opencode=true ;;
+    *) error "Invalid --agent '$REQ_AGENT' (claude|opencode|both)" ;;
+  esac
+  local AGENTS=""
+  if [ "$want_claude" = true ];   then AGENTS="claude"; fi
+  if [ "$want_opencode" = true ]; then AGENTS="${AGENTS:+$AGENTS }opencode"; fi
+  agent_has() { case " $AGENTS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+
+  # dest::source pairs — SHARED harness-owned files, refreshed for every target.
   local REFRESH=(
-    "CLAUDE.md::templates/docs/CLAUDE.md"
     "AGENTS.md::templates/docs/AGENTS.md"
     "blinder/docs/leader.md::templates/docs/leader.md"
     "blinder/docs/specs.md::templates/docs/specs.md"
@@ -520,6 +549,7 @@ cmd_upgrade() {
     warn "Not a git repo — upgrade won't be easily reversible. Consider 'git init' first."
   fi
 
+  echo "── Target set ── blinder/.agents = $AGENTS${REQ_AGENT:+  (--agent $REQ_AGENT, union with existing '$EXISTING')}"
   echo "── Refresh (harness-owned, overwritten) ──"
   local pair dest src
   for pair in "${REFRESH[@]}"; do
@@ -527,16 +557,34 @@ cmd_upgrade() {
     echo "  $dest"
     if [ "$DRY" = false ]; then mkdir -p "$(dirname "$dest")"; cp "$BLINDER_ROOT/$src" "$dest"; fi
   done
-  echo "  blinder/prompts/roles/* + .claude/agents/* (role prompts)"
-  [ "$DRY" = false ] && bash "$BLINDER_ROOT/templates/install/install_agents.sh" "." >/dev/null
+  # Per-target shell (conditional on the resolved set).
+  if agent_has claude; then
+    echo "  CLAUDE.md"
+    if [ "$DRY" = false ]; then cp "$BLINDER_ROOT/templates/docs/CLAUDE.md" CLAUDE.md; fi
+  fi
+  if agent_has opencode; then
+    echo "  .opencode/plugins/blinder-verify.ts"
+    if [ "$DRY" = false ]; then
+      mkdir -p .opencode/plugins
+      cp "$BLINDER_ROOT/templates/config/blinder-verify.plugin.ts" .opencode/plugins/blinder-verify.ts
+    fi
+  fi
+  echo "  blinder/prompts/roles/* + per-target subagents ($AGENTS)"
+  if [ "$DRY" = false ]; then bash "$BLINDER_ROOT/templates/install/install_agents.sh" "." --agent "$AGENTS" >/dev/null; fi
+
+  # Project-owned config: created only when missing, never overwritten.
   if [ ! -f blinder/verify.env ]; then
     echo "  blinder/verify.env (missing — will be created from template)"
-    [ "$DRY" = false ] && cp "$BLINDER_ROOT/templates/verify.env" blinder/verify.env
+    if [ "$DRY" = false ]; then cp "$BLINDER_ROOT/templates/verify.env" blinder/verify.env; fi
+  fi
+  if agent_has opencode && [ ! -f opencode.json ]; then
+    echo "  opencode.json (missing — will be created from template)"
+    if [ "$DRY" = false ]; then cp "$BLINDER_ROOT/templates/config/opencode.json" opencode.json; fi
   fi
 
   echo "── Preserve (untouched) ──"
   echo "  feature_list.json · specs/ · progress/ · docs/architecture.md · docs/conventions.md"
-  echo "  blinder/verify.env · root docs/ · .claude/settings.json · src/ & tests/"
+  echo "  blinder/verify.env · opencode.json · root docs/ · .claude/settings.json · src/ & tests/"
   echo "── Regenerate ── blinder/roadmap.md"
 
   if [ "$DRY" = true ]; then
@@ -544,10 +592,11 @@ cmd_upgrade() {
     return 0
   fi
 
+  echo "$AGENTS" > blinder/.agents
   chmod +x blinder/init.sh blinder/cli.sh
   write_roadmap
   stamp_version
-  ok "Upgraded — $(cat blinder/.version)"
+  ok "Upgraded ($AGENTS) — $(cat blinder/.version)"
   info "Review with 'git diff', then verify: bash blinder/init.sh"
 }
 
