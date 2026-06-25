@@ -55,7 +55,13 @@ if agent_has claude; then
 fi
 # OpenCode shell: entrypoint config, verify plugin, and the transformed subagents.
 if agent_has opencode; then
-  for f in opencode.json .opencode/plugins/blinder-verify.ts \
+  # opencode.json is valid at root OR under .opencode/ (OpenCode checks both).
+  if [ -f opencode.json ] || [ -f .opencode/opencode.json ]; then
+    ok "exists opencode.json"
+  else
+    fail "missing opencode.json (expected at root or .opencode/opencode.json)"; EXIT_CODE=1
+  fi
+  for f in .opencode/plugins/blinder-verify.ts \
            .opencode/agents/spec_author.md .opencode/agents/implementer.md \
            .opencode/agents/reviewer.md; do
     if [ -f "$f" ]; then ok "exists $f"; else fail "missing $f"; EXIT_CODE=1; fi

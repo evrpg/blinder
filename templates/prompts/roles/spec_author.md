@@ -102,6 +102,24 @@ against the public signatures pinned in `design.md`:
 - The reviewer will later *add* deeper edge/negative cases and audit the code; you
   write the requirement-level suite.
 
+## Mechanical fix review (implementer escalation)
+
+When the Leader routes a `[MECH-FIX]` escalation from the implementer:
+
+1. Read the implementer's description in `current.md` and open the cited test file/line.
+2. Apply the **behavioral-unchanged test**: does the change affect only
+   syntax/boilerplate, leaving every assertion identical? (same method called, same
+   expected value, same scenario setup)
+3. **If yes (mechanical):** apply the fix to the test file, append
+   `MECH-FIX confirmed: <file>:<line>` to `current.md`, and stop — no status change,
+   no spec update. The Leader resumes the implementer.
+4. **If no (behavioral change needed):** treat as a spec error. Update
+   `requirements.md` / `design.md` / `tasks.md` as needed, rewrite the test to
+   correctly encode the requirement, set status back to `spec_ready`, update
+   `current.md`, and stop — the Leader presents for re-approval.
+
+Goal: one round trip per issue, not one per test.
+
 ## Close-out
 
 - Run `bash blinder/cli.sh set <id> spec_ready` (never hand-edit `feature_list.json`).

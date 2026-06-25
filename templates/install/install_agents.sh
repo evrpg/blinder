@@ -53,16 +53,27 @@ install_claude_agents() {
 }
 
 # Transform a Claude-canonical subagent .md into OpenCode format on stdout:
-#   - drop `name:` (OpenCode derives the id from the filename), `model:`, `effort:`
-#     (D-3: OpenCode inherits the user's configured model — no per-role pinning)
+#   - drop `name:` (OpenCode derives the id from the filename)
+#   - drop `model:` and `effort:` from the *source* — but if the *existing target*
+#     file already has them (user set them), preserve those values (project-owned,
+#     never overwritten — same pattern as verify.env).
 #   - inject `mode: subagent`
 #   - map the Claude `tools:` ALLOWLIST into a `permission:` block (the modern field;
 #     `tools:` is deprecated): a capability is `allow` iff its Claude tool is listed,
 #     else `deny`. Read-type tools (read/grep/glob/list) stay at OpenCode's default
 #     allow. We gate the meaningful ones: edit (file writes), bash, webfetch, websearch.
 #   - keep the prompt body verbatim.
+#
+# Usage: opencode_transform <src.md> [existing-target.md]
 opencode_transform() {
-  awk '
+  local src="$1" existing="${2:-}"
+  local pmodel="" peffort="" pvariant=""
+  if [ -f "$existing" ]; then
+    pmodel=$(awk   'f==1 && /^model:/   {sub(/^model:[ \t]*/,"");   print; exit} /^---/{f++}' "$existing")
+    peffort=$(awk  'f==1 && /^effort:/  {sub(/^effort:[ \t]*/,"");  print; exit} /^---/{f++}' "$existing")
+    pvariant=$(awk 'f==1 && /^variant:/ {sub(/^variant:[ \t]*/,""); print; exit} /^---/{f++}' "$existing")
+  fi
+  awk -v pmodel="$pmodel" -v peffort="$peffort" -v pvariant="$pvariant" '
     NR==1 && $0=="---" { infm=1; next }
     infm && $0=="---" {
       infm=0
@@ -73,6 +84,9 @@ opencode_transform() {
       print "---"
       print "description: " desc
       print "mode: subagent"
+      if (pmodel   != "") print "model: "   pmodel
+      if (peffort  != "") print "effort: "  peffort
+      if (pvariant != "") print "variant: " pvariant
       print "permission:"
       print "  edit: " editp
       print "  bash: " bashp
@@ -87,17 +101,18 @@ opencode_transform() {
       next
     }
     { print }
-  ' "$1"
+  ' "$src"
 }
 
 # opencode: emit the transformed subagents into .opencode/agents/ (id = filename).
 install_opencode_agents() {
   mkdir -p "$TARGET_DIR/.opencode/agents"
-  local agent
+  local agent tgt
   for agent in "${SUBAGENTS[@]}"; do
-    opencode_transform "$ROLES_DIR/$agent.md" > "$TARGET_DIR/.opencode/agents/$agent.md"
+    tgt="$TARGET_DIR/.opencode/agents/$agent.md"
+    opencode_transform "$ROLES_DIR/$agent.md" "$tgt" > "$tgt.tmp" && mv "$tgt.tmp" "$tgt"
   done
-  echo "  opencode → .opencode/agents/: ${SUBAGENTS[*]} (model/effort dropped; tools→permission)"
+  echo "  opencode → .opencode/agents/: ${SUBAGENTS[*]} (model/effort preserved if set; tools→permission)"
 }
 
 if agent_has claude;   then install_claude_agents; fi

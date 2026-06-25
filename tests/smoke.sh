@@ -89,7 +89,7 @@ assert "NO CLAUDE.md"                test ! -f "$D/CLAUDE.md"
 assert "NO .claude/"                 test ! -d "$D/.claude"
 assert "AGENTS.md present (shared)"  test -f "$D/AGENTS.md"
 assert "leader.md present (shared)"  test -f "$D/blinder/docs/leader.md"
-assert "opencode.json present"       test -f "$D/opencode.json"
+assert "opencode.json present"       test -f "$D/.opencode/opencode.json"
 assert "verify plugin present"       test -f "$D/.opencode/plugins/blinder-verify.ts"
 assert ".agents = 'opencode'"        agents_eq "$D" "opencode"
 assert_oc_agent "$D" spec_author deny
@@ -102,7 +102,7 @@ section "4. --agent both — both shells present"
 D="$WORK/both"; scaffold "$D" --agent both
 assert "CLAUDE.md present"           test -f "$D/CLAUDE.md"
 assert ".claude/agents present"      test -f "$D/.claude/agents/spec_author.md"
-assert "opencode.json present"       test -f "$D/opencode.json"
+assert "opencode.json present"       test -f "$D/.opencode/opencode.json"
 assert ".opencode/agents present"    test -f "$D/.opencode/agents/spec_author.md"
 assert "verify plugin present"       test -f "$D/.opencode/plugins/blinder-verify.ts"
 assert ".agents = 'claude opencode'" agents_eq "$D" "claude opencode"
@@ -137,10 +137,24 @@ assert "missing .agents ⇒ 'claude'"  agents_eq "$D" "claude"
 # ===========================================================================
 section "7. upgrade preserves project-owned opencode.json (user's model)"
 D="$WORK/preserve"; scaffold "$D" --agent opencode
-( cd "$D" && jq '. + {"model":"openai/gpt-5"}' opencode.json > o.tmp && mv o.tmp opencode.json )
+( cd "$D" && jq '. + {"model":"openai/gpt-5"}' .opencode/opencode.json > o.tmp && mv o.tmp .opencode/opencode.json )
 commit_all "$D"; do_upgrade "$D"
-assert "user model survives upgrade" json_eq "$D/opencode.json" '.model' 'openai/gpt-5'
+assert "user model survives upgrade" json_eq "$D/.opencode/opencode.json" '.model' 'openai/gpt-5'
 assert "plugin refreshed (exists)"   test -f "$D/.opencode/plugins/blinder-verify.ts"
+
+# ===========================================================================
+section "8. opencode model/effort preserved on re-install (project-owned)"
+D="$WORK/oc_model"; scaffold "$D" --agent opencode
+# Inject model + effort into implementer; leave spec_author untouched.
+awk '/^mode: subagent/{print; print "model: openai/gpt-5.5"; print "effort: low"; print "variant: high"; next} {print}' \
+  "$D/.opencode/agents/implementer.md" > "$D/.opencode/agents/implementer.md.tmp" \
+  && mv "$D/.opencode/agents/implementer.md.tmp" "$D/.opencode/agents/implementer.md"
+bash "$SRC/templates/install/install_agents.sh" "$D" --agent opencode >/dev/null 2>&1
+assert "model preserved after re-install"   grep -q '^model: openai/gpt-5.5' "$D/.opencode/agents/implementer.md"
+assert "effort preserved after re-install"  grep -q '^effort: low'            "$D/.opencode/agents/implementer.md"
+assert "variant preserved after re-install" grep -q '^variant: high'          "$D/.opencode/agents/implementer.md"
+assert "untouched agent has no model"       nogrep '^model:'                  "$D/.opencode/agents/spec_author.md"
+assert "body still intact after preserve"   grep -q 'Role: Implementer'       "$D/.opencode/agents/implementer.md"
 
 # ===========================================================================
 printf "\n${DIM}────────────────────────────────────────${NC}\n"

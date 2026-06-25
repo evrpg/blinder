@@ -167,8 +167,8 @@ cmd_init() {
   # OpenCode entrypoint config + verification plugin. opencode.json is project-ownable
   # (the user sets their model/provider there — D-3); the plugin is harness verify glue.
   if agent_has opencode; then
-    cp "$BLINDER_ROOT/templates/config/opencode.json" "./opencode.json"
     mkdir -p .opencode/plugins
+    cp "$BLINDER_ROOT/templates/config/opencode.json" "./.opencode/opencode.json"
     cp "$BLINDER_ROOT/templates/config/blinder-verify.plugin.ts" "./.opencode/plugins/blinder-verify.ts"
   fi
 
@@ -577,14 +577,14 @@ cmd_upgrade() {
     echo "  blinder/verify.env (missing — will be created from template)"
     if [ "$DRY" = false ]; then cp "$BLINDER_ROOT/templates/verify.env" blinder/verify.env; fi
   fi
-  if agent_has opencode && [ ! -f opencode.json ]; then
-    echo "  opencode.json (missing — will be created from template)"
-    if [ "$DRY" = false ]; then cp "$BLINDER_ROOT/templates/config/opencode.json" opencode.json; fi
+  if agent_has opencode && [ ! -f opencode.json ] && [ ! -f .opencode/opencode.json ]; then
+    echo "  .opencode/opencode.json (missing — will be created from template)"
+    if [ "$DRY" = false ]; then cp "$BLINDER_ROOT/templates/config/opencode.json" .opencode/opencode.json; fi
   fi
 
   echo "── Preserve (untouched) ──"
   echo "  feature_list.json · specs/ · progress/ · docs/architecture.md · docs/conventions.md"
-  echo "  blinder/verify.env · opencode.json · root docs/ · .claude/settings.json · src/ & tests/"
+  echo "  blinder/verify.env · opencode.json (or .opencode/opencode.json) · root docs/ · .claude/settings.json · src/ & tests/"
   echo "── Regenerate ── blinder/roadmap.md"
 
   if [ "$DRY" = true ]; then

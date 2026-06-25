@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Implements ONE approved feature so its pre-written test suite passes. Writes application code only — never edits the tests.
+description: Implements ONE approved feature so its pre-written test suite passes. Writes application code; may fix test mechanics (not assertions).
 tools: Read, Glob, Grep, Write, Edit, Bash
 model: sonnet
 ---
@@ -45,12 +45,22 @@ make that test pass. Everything else below is identical.
 
 ## Rules
 
-- **The tests are read-only.** Never edit, delete, weaken, or skip a test to make it
-  pass — that defeats the oracle. If a test looks **wrong, impossible, or
-  contradicts the spec**, do not work around it: mark the task `[!]`, note it in
-  `current.md`, and **stop / escalate to the Leader** (who routes it back to
-  `spec_author`). The only exception is adding a project-level test fixture the
-  conventions require (e.g. a `conftest.py` path shim) — never a change to assertions.
+- **The tests are behaviorally read-only.** The behavioral oracle — which assertion is
+  made, which method is called, what values are expected, which scenario is covered —
+  is **sacred**. Never change it to make a test pass.
+
+  You MAY fix **mechanical defects**: syntax or language-framework issues that prevent
+  compilation or execution without touching the assertion (e.g. adding an explicit
+  `Unit` return type in Kotlin JUnit4, fixing a wrong import, correcting a misused
+  framework annotation). Mechanical rule: the diff shows only boilerplate/syntax
+  changes; every assertion line is identical. When you make one, log it in
+  `current.md` as `[MECH-FIX] <test-file>:<line> — <what changed and why>`.
+
+  If the test is **behaviorally wrong** (bad assertion value, wrong scenario, wrong
+  method called) — do not work around it: mark `[!]`, write the issue clearly in
+  `current.md`, and **stop / escalate to the Leader** (who routes it to `spec_author`).
+  The only other exception is adding a project-level test fixture the conventions
+  require (e.g. a `conftest.py` path shim) — never a change to assertions.
 - Follow `blinder/docs/conventions.md` (style, naming, errors) and `blinder/docs/architecture.md`
   (layers, structure) strictly. Match `design.md` signatures exactly.
 - If the spec itself is wrong or incomplete, stop and report to the Leader — do not

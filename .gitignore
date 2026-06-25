@@ -16,3 +16,6 @@ htmlcov/
 
 # Claude Code local caches (relevant inside scaffolded projects)
 .claude/settings.local.json
+
+# Temporary working notes
+in_progress_kotlin_guidance.md
