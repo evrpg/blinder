@@ -7,11 +7,13 @@
 ## High value
 
 ### Automated test suite (`bats` + `shellcheck`)
-Blinder has **zero automated tests today** — every change has been verified by hand in
-`/tmp`. The repeated `set -e` + trailing-`&&` bugs and the cycle-detection jq scope bug
-would have been caught instantly by a suite.
+A first automated check now exists: **`tests/smoke.sh`** (pure bash, no live agent run)
+covers `bash -n`, the `claude`/`opencode`/`both` scaffolds, the OpenCode frontmatter
+transform, and `upgrade --agent` union/preserve behavior. Still missing: `shellcheck`, and
+behavioral coverage of the CLI invariants below (the repeated `set -e` + trailing-`&&` bugs
+and the cycle-detection jq scope bug would have been caught instantly by these).
 
-Plan (sketched, not built):
+Plan (smoke.sh is the start; the rest sketched, not built):
 - **shellcheck** gate over `scripts/blinder.sh`, `templates/init.sh`,
   `templates/install/install_agents.sh`.
 - **bats** behavioral tests in `tests/bats/`, one file per command + `init_sh.bats`,
@@ -37,6 +39,27 @@ Plan (sketched, not built):
   can be added later if they become frequent.
 - **`.claude/settings.json` on upgrade** — left untouched (users may add custom hooks).
   A merge/refresh strategy could be added if the default hook config evolves.
+
+## Multi-agent targets (OpenCode) — follow-ups
+
+Shipped: `--agent claude|opencode|both` on `init`/`upgrade`, persisted in `blinder/.agents`
+(see `docs/DESIGN.md` D16, plan in `docs/opencode-support.md`). Deferred from that work:
+
+- **Model tiering on OpenCode via `small_model`** — D16 drops `model:`/`effort:` on OpenCode
+  (it inherits the user's configured model), so tiering (D7) is Claude-only for now. A path:
+  map the mechanical `implementer` to OpenCode's `small_model` and the judgment roles to the
+  main model, without hardcoding provider slugs. Until then, the escape hatch is a manual
+  `model:` per `.opencode/agents/*.md`.
+- **Explicit `upgrade --agent X --only` / `--replace`** — `upgrade --agent` is union/add-only
+  (D-6) so a typo can't delete a working shell; removing/switching a target is manual today
+  (delete the shell dir + edit `.agents`, reversible via git). A verbose flag that prints
+  exactly what it would delete before doing so would make switching first-class.
+- **Generalize to a third agent front-end** — the per-target generator is currently a
+  two-branch dispatch (claude/opencode) over a Claude-canonical source. A third target would
+  justify revisiting D-1 (a neutral metadata block → emit-all) instead of adding branches.
+- **Live plugin-firing test** — the OpenCode verify plugin is parse/registration-validated
+  (OpenCode 1.17.9) but its `tool.execute.after` hook hasn't been exercised end-to-end in a
+  real session (needs an LLM run). Worth a one-time confirmation in a throwaway project.
 
 ## Possible enhancements (not committed to)
 

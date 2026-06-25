@@ -151,7 +151,7 @@ Two ways to reach the CLI:
 
 | Command | What it does |
 |---------|--------------|
-| `blinder init [--name N]` | Scaffold the harness into the current dir (source CLI only). |
+| `blinder init [--name N] [--agent claude\|opencode\|both]` | Scaffold the harness into the current dir (source CLI only). `--agent` picks the front-end(s); default `claude`. See [§13](#13-multi-agent-targets-claude-code--opencode). |
 | `bash blinder/cli.sh new "title" [opts]` | Register a tracked unit; assigns `FR-XXXX`. `--type fix --fixes FR-X` marks a fix linked to what it repairs. |
 | `bash blinder/cli.sh set <id> <status> [--reason "…"]` | Transition a feature's status — validates the value, enforces one `in_progress`, bumps `updated`, sets/clears `blocked_reason`. Agents use this for every phase change instead of editing the JSON. |
 | `bash blinder/cli.sh log "message"` | Append a one-line entry to `history.md` for a **chore** — a change too small to be a tracked unit. No unit, no cycle. |
@@ -374,12 +374,16 @@ blinder upgrade                  # apply
 git diff                         # review; then: bash blinder/init.sh
 ```
 
-It **refreshes** the harness-owned files (`CLAUDE.md`, `AGENTS.md`, `cli.sh`,
-`init.sh`, role prompts/subagents, `blinder/docs/specs.md` + `CHECKPOINTS.md`,
-`decisions.template.md`), **preserves** everything project-owned (`feature_list.json`,
-`specs/`, `progress/`, `blinder/docs/architecture.md` + `conventions.md`,
-`blinder/verify.env`, your root `docs/`, `.claude/settings.json`, `src/`/`tests/`),
-and **regenerates** `roadmap.md`. It stamps `blinder/.version`.
+It **refreshes** the shared harness-owned files (`AGENTS.md`, `blinder/docs/leader.md`,
+`cli.sh`, `init.sh`, role prompts, `blinder/docs/specs.md` + `CHECKPOINTS.md`,
+`decisions.template.md`) plus the per-target shell for whatever targets the project uses
+(`CLAUDE.md` + `.claude/agents/` for Claude; `.opencode/agents/` + the verify plugin for
+OpenCode — see [§13](#13-multi-agent-targets-claude-code--opencode)), **preserves**
+everything project-owned (`feature_list.json`, `specs/`, `progress/`,
+`blinder/docs/architecture.md` + `conventions.md`, `blinder/verify.env`, your root `docs/`,
+`.claude/settings.json`, `opencode.json`, `src/`/`tests/`), and **regenerates** `roadmap.md`.
+It stamps `blinder/.version`. `upgrade --agent X` **adds** a target (union/add-only — it
+never removes one).
 
 Because `CLAUDE.md` and `AGENTS.md` are harness-owned and overwritten here, **don't
 store project knowledge in them** — anything you add is lost on the next upgrade. Put
@@ -442,6 +446,84 @@ giving the agents more capabilities.
   session, but disk state survives cold restarts — the whole point is resumability.
   Agents may use Task tools as a scratchpad, but `feature_list.json` + `tasks.md` are
   canonical.
-- **Why Claude-only?** To fully exploit native mechanisms (`AskUserQuestion`, plan
-  mode, real subagents). `AGENTS.md` stays generic so another CLI can read the repo,
-  but the discussion phase specifically relies on Claude Code.
+- **Why Claude-first (and now OpenCode too)?** To fully exploit native mechanisms
+  (`AskUserQuestion`, plan mode, real subagents). The role-prompt *bodies* and `AGENTS.md`
+  stay generic, so Blinder also targets **OpenCode** — `init --agent opencode|both`
+  generates the OpenCode shell from the same canonical sources (see
+  [§13](#13-multi-agent-targets-claude-code--opencode) and `docs/DESIGN.md` D16). Other
+  CLIs can still read the repo even without a generated shell.
+
+---
+
+## 13. Multi-agent targets (Claude Code + OpenCode)
+
+One Blinder project can be driven by **Claude Code**, **OpenCode**, or **both**. The CLI,
+verifier, on-disk state, specs/docs, and the role-prompt *bodies* are tool-agnostic; only a
+thin shell differs per tool (agent file format, the verify hook, the always-loaded
+entrypoint doc). Blinder **generates that shell per target from one canonical source** — it
+never forks the template tree.
+
+### Choosing targets
+
+```bash
+blinder init --name my-app                 # default: claude
+blinder init --name my-app --agent opencode
+blinder init --name my-app --agent both
+```
+
+The selected set is recorded in **`blinder/.agents`** (e.g. `claude` or `claude opencode`).
+A project scaffolded before multi-agent support has no `.agents` file and is treated as
+`claude` — nothing to do.
+
+### What each target gets
+
+| | Claude Code | OpenCode |
+|---|---|---|
+| Entrypoint | `CLAUDE.md` (`@`-imports `blinder/docs/leader.md`) | `opencode.json` `instructions: ["AGENTS.md", "blinder/docs/leader.md"]` |
+| Subagents | `.claude/agents/*.md` (verbatim from the canonical role prompts) | `.opencode/agents/*.md` (frontmatter transformed) |
+| Verify hook | `.claude/settings.json` `PostToolUse` → `bash blinder/init.sh` | `.opencode/plugins/blinder-verify.ts` (`tool.execute.after`) → `bash blinder/init.sh` |
+| Shared by both | `AGENTS.md`, `blinder/docs/leader.md`, `blinder/`, the role-prompt bodies | same |
+
+The OpenCode subagents are produced from the **same** Claude-canonical role files: the
+transform drops the `name:` (OpenCode uses the filename), drops `model:`/`effort:`, injects
+`mode: subagent`, and maps the Claude `tools:` allowlist into a `permission:` block (so
+`spec_author` still can't run shell commands, while `implementer`/`reviewer` can).
+
+### Prerequisite
+
+Just **OpenCode itself**. Its verify plugin is TypeScript and runs on Bun, but **OpenCode
+bundles Bun** — you do *not* need a separate `bun` install (validated against OpenCode
+1.17.9). The Claude path stays zero-runtime (bash + jq).
+
+### Limitation: no model/effort tiering on OpenCode
+
+Because OpenCode is multi-provider, Blinder does **not** pin per-role `model:`/`effort:`
+there — every OpenCode role runs on the model you configure in `opencode.json`. So **model
+tiering (§8.5) is a Claude-only feature for now.** If you want a specific OpenCode role on a
+different model, add a `model:` line to that `.opencode/agents/<role>.md` by hand (it
+survives until the next `upgrade`, which refreshes the agent files). `opencode.json` itself
+is **preserved** across upgrades — it's where you set your provider/model.
+
+### Interactive questions degrade gracefully
+
+The discussion phase asks the human before any spec. On Claude Code that uses
+`AskUserQuestion`; on OpenCode it uses the structured question tool when available, and
+otherwise the **same Q&A in plain conversation**. The invariant is "ask before spec," not a
+particular widget.
+
+### Adding, switching, or removing a target later
+
+- **Add** (the common case) — `upgrade --agent` is **union / add-only**, so it can only
+  grow the set, never silently delete a working shell:
+  ```bash
+  blinder upgrade --agent opencode    # a claude project → claude + opencode
+  blinder upgrade --agent both        # ensure both are present
+  ```
+- **Switch / remove** — deliberate and manual (so a typo can't wipe a shell). Delete the
+  target's shell and drop it from `blinder/.agents`, e.g. to go OpenCode-only:
+  ```bash
+  rm -f CLAUDE.md && rm -rf .claude/agents
+  printf 'opencode\n' > blinder/.agents
+  ```
+  It's reversible via git, and a future `upgrade --agent claude` would add Claude back. (An
+  explicit `--only`/`--replace` flag that prints what it deletes is on the backlog.)

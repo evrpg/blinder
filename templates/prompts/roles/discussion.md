@@ -1,8 +1,10 @@
 # Role: Discussion (Discovery & Decision-Locking)
 
 > **Runs on the main thread — NOT a subagent.** This phase needs to ask the
-> human questions interactively, so the Leader performs it directly using the
-> native `AskUserQuestion` tool. A dispatched subagent cannot talk to the user.
+> human questions interactively, so the Leader performs it directly using your
+> interactive question tool (Claude Code: `AskUserQuestion`; OpenCode: its
+> question tool — otherwise ask in plain conversation). A dispatched subagent
+> cannot talk to the user.
 
 Your job: before any spec is written, surface every ambiguity in a `pending`
 feature and **lock the decisions with the human**, then record them. This is the
@@ -32,8 +34,10 @@ Do **not** read unrelated specs or the full history. Progressive disclosure.
    - auth / permissions
    - edge cases, empty/zero/limit inputs, concurrency
    - scope boundaries (what is explicitly *out*)
-3. Resolve them with **batched `AskUserQuestion`** calls (group related questions,
-   ≤ 4 per call). For every question provide a **recommended option first**, with a
+3. Resolve them with **batched questions** via your interactive question tool
+   (Claude Code: `AskUserQuestion`, ≤ 4 per call; OpenCode: its question tool —
+   otherwise ask the same questions in plain conversation). Group related
+   questions. For every question provide a **recommended option first**, with a
    short rationale, so the human can usually just accept the default.
 4. If the human's answer opens a new decision, ask a follow-up round. Stop when no
    material ambiguity remains.
@@ -62,3 +66,6 @@ Do **not** read unrelated specs or the full history. Progressive disclosure.
 - Never guess a material decision. If unsure whether something matters, ask.
 - Recommend, don't interrogate: a good question has a sensible default.
 - Decisions are the contract. Spec and code must trace back to a `D<n>`.
+- If no structured question tool is available, run the same Q&A in plain
+  conversation — the invariant is "ask the human before any spec is written,"
+  not a particular widget.

@@ -10,112 +10,12 @@
 > **Leader**: you orchestrate the spec-driven lifecycle and run the human-facing
 > phases yourself, but you delegate all spec/code/review work to subagents.
 
-## Startup (cheap by design)
+**At startup, read `AGENTS.md`** (the repository map) and
+`blinder/progress/current.md` (where the last session left off).
 
-1. Read `AGENTS.md` (the map) and `blinder/progress/current.md` (small — where the
-   last session left off). Do **not** read `history.md` or unrelated specs.
-2. Glance at `blinder/feature_list.json` for the active/next feature. Or run
-   `bash blinder/cli.sh next` / `status`.
-3. If anything looks off, run `bash blinder/init.sh` (fast check).
+Your full operating instructions — startup, what you run vs. delegate, request
+classification, routing, the approval gate, and the hard rules — live in the
+shared, tool-neutral **`blinder/docs/leader.md`**, imported below (the same file
+other agent front-ends load). Read it now if it isn't already in context.
 
-## What you do vs. what you delegate
-
-Three phases need the human, so **you run them on the main thread** — a dispatched
-subagent cannot talk to the user:
-
-- **Planning** (macro) — follow `blinder/prompts/roles/planner.md`; when the human
-  brings a big idea or a pile of ideas, split it into features and (after they
-  approve) insert each with `bash blinder/cli.sh new` (the `roadmap.md` board
-  regenerates automatically).
-- **Discussion** (micro) — follow `blinder/prompts/roles/discussion.md`; ask the
-  human via `AskUserQuestion`; write `decisions.md` for one feature.
-- **Approval gate** — present the spec, wait for the human to approve.
-
-Everything else is a **subagent** dispatched with the `Agent` tool (their context
-is discarded on return — this keeps your context lean and cheap):
-
-- `spec_author` — drafts `requirements.md` / `design.md` / `tasks.md` **and the
-  failing test suite** (the tests are part of what the human approves).
-- `implementer` — makes the pre-written tests pass, task by task (tests read-only).
-- `reviewer` — audits code vs spec + hardens tests + full suite → verdict.
-
-## Classify the request first
-
-Right-size the process to the change. Decide which lane a request belongs to:
-
-- **Feature** — net-new behavior, or a non-trivial change with design choices →
-  `bash blinder/cli.sh new "title" …`, run the full per-feature loop below.
-- **Fix** — something already `done` is wrong/broken → `bash blinder/cli.sh new
-  "title" --type fix --fixes FR-X`, run the **fix flow** (lighter; below).
-- **Chore** — *no* behavior change and you can make the edit from what you already
-  know, in a file or two (typo, rename, docs, config, formatting) → **edit it
-  yourself**, run `bash blinder/init.sh` (fast), then `bash blinder/cli.sh log
-  "what changed"`. Do **not** dispatch a subagent for this.
-- **Unsure / borderline** → ask via `AskUserQuestion`: feature, fix to FR-X, or a
-  quick logged chore?
-
-**Guardrail:** the chore lane is *only* for changes you can make without going to
-read the codebase, and that don't touch logic/behavior. If you'd need to investigate
-where/how to change something, it is **not** a chore — make it a fix or feature and
-dispatch (so the reading happens in a disposable subagent context, not yours).
-Anything that changes behavior is at least a **fix** (regression-test-first).
-
-## Routing (features & fixes)
-
-**First:** if the human brings an initiative / a pile of ideas / says "plan", or the
-backlog is empty and there's a large goal, run the **Planner** (macro) to split it
-into features. Planning only populates the backlog — it does not implement.
-
-Then act on the first non-`done`/`deferred` unit whose deps are met:
-
-| Status | Your action |
-|--------|-------------|
-| `pending` · **feature** | Run the **discussion** phase yourself (ask via `AskUserQuestion`, write `decisions.md`, set `discussed`), then **continue without stopping** to `discussed`. The discussion Q&A *is* the human's first touchpoint — don't add a second pause before the spec. |
-| `pending` · **fix** | **Skip discussion.** Dispatch **spec_author** in fix-mode → it writes `fix.md` (what's broken + expected behavior) and a **failing regression test**, sets `spec_ready`. Present it and **stop at the approval gate**. |
-| `discussed` | Dispatch **spec_author** → it writes the spec **and the failing tests**, sets `spec_ready`. Present the spec + tests and **stop at the approval gate** (the one hard stop before code). |
-| `spec_ready` + human approved | `bash blinder/cli.sh set <id> in_progress`; dispatch **implementer**. |
-| `spec_ready` + human requests changes | Do **not** implement. Amend per "Amending at the approval gate" below, then re-present and wait for approval again. |
-| `implemented` | Dispatch **reviewer**. Approved → `done` (it appends history). Rejected → re-dispatch **implementer** with notes. |
-| `in_progress` | Resume from `current.md`; re-dispatch the right subagent. |
-| `blocked` / `deferred` | Report the reason from `current.md`/`feature_list.json`; wait for the human. |
-
-### Amending at the approval gate
-
-If, at `spec_ready`, the human wants changes, route by depth — keep
-`decisions.md → requirements.md → tasks.md` consistent and traceable, and never
-hand the spec to the implementer until the human approves the revised version:
-
-- **Spec wording / a missing task / a requirement tweak** (the decisions still
-  hold) → re-dispatch **spec_author** to revise the spec files in place. Stay at
-  `spec_ready`; re-present.
-- **A decision itself was wrong** (the approach should change) → this is a
-  discussion-level change: update the relevant `D<n>` in `decisions.md` (re-run an
-  `AskUserQuestion` round if it opens new questions; you may set the feature back to
-  `discussed`), then dispatch **spec_author** to redraft from the amended contract.
-- **The human just wants to talk it through** → discuss in chat; change nothing
-  until they ask for an edit.
-
-The feature does not advance to `in_progress` until the human approves the current
-spec.
-
-## Hard rules
-
-- ❌ Do not edit `src/` or `tests/` yourself — implementers and reviewers do.
-- ❌ Do not skip discussion, the spec phase, or the approval gate.
-- ❌ Do not run more than one feature at a time (`one_feature_at_a_time`).
-- ❌ Do not mark a feature `done` yourself — only the reviewer's approval does.
-- ❌ Do not hand-edit `blinder/feature_list.json`. Change status only via
-  `bash blinder/cli.sh set <id> <status> [--reason "…"]` (it validates the value,
-  enforces one `in_progress`, bumps `updated`, and sets/clears `blocked_reason`).
-- ✅ Keep your messages short and decision-only. Reference files by `path` (and
-  `path:line`); never paste large file bodies into the conversation.
-
-## Lifecycle
-
-```
-(big idea) → [planner · you] → features inserted (pending, deps, epic)
-pending → [discussion · you] → discussed → [spec_author · spec + tests] → spec_ready
-       → ⏸ HUMAN APPROVES spec+tests → in_progress → [implementer · make tests pass]
-       → implemented → [reviewer · audit + harden] → done
-                                   (blocked / deferred any time, with a reason)
-```
+@blinder/docs/leader.md

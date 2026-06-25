@@ -91,9 +91,12 @@ A large initiative is therefore just an **epic-tagged chain of features** linked
 
 ## Requirements
 
-- **[Claude Code](https://claude.com/claude-code)** — the runtime that drives the workflow.
+- **[Claude Code](https://claude.com/claude-code)** — the default runtime that drives the workflow.
 - **git** — Claude Code uses it for diffs; also your project history.
 - **bash** and **[jq](https://jqlang.github.io/jq/)** — used by the CLI and the verification harness.
+- *Optional:* **[OpenCode](https://opencode.ai)** — Blinder can target it instead of, or
+  alongside, Claude Code via `--agent` (it bundles its own runtime; no separate Bun
+  install). See [MANUAL §13](./MANUAL.md#13-multi-agent-targets-claude-code--opencode).
 
 ## Install
 
@@ -138,8 +141,8 @@ which is what lets the Planner call it from a non-interactive agent shell.
 
 | Command | Description |
 |---------|-------------|
-| `blinder init [--name N]` | Scaffold the harness into the current directory (source CLI). |
-| `blinder upgrade [--dry-run]` | Refresh harness-owned files in an existing project; preserves your state, specs, and tuning (source CLI; clean git tree). |
+| `blinder init [--name N] [--agent claude\|opencode\|both]` | Scaffold the harness into the current directory (source CLI). `--agent` picks the front-end(s); default `claude`. |
+| `blinder upgrade [--dry-run] [--agent …]` | Refresh harness-owned files in an existing project; preserves your state, specs, and tuning (source CLI; clean git tree). `--agent` adds a target (union/add-only). |
 | `bash blinder/cli.sh new "title" [opts]` | Register a tracked unit (`--type fix --fixes FR-X` for a fix); assigns the next `FR-XXXX` id. |
 | `bash blinder/cli.sh status` | Dashboard of all features — state, deps, blocked reasons — grouped by epic. |
 | `bash blinder/cli.sh next` | Print the next actionable feature (all dependencies satisfied). |
@@ -228,7 +231,7 @@ blinder/
 ├── scripts/blinder.sh   # the CLI (init / new / status / next)
 └── templates/           # everything copied into a scaffolded project
     ├── init.sh
-    ├── config/          # feature_list.json, claude_settings.json
+    ├── config/          # feature_list.json, claude_settings.json, opencode.json, verify plugin
     ├── docs/            # CLAUDE.md, AGENTS.md, specs.md, CHECKPOINTS.md, stubs, decisions tmpl
     ├── progress/        # current.md, history.md, roadmap.md
     ├── prompts/roles/   # the 5 role prompts (single source of truth)
@@ -271,9 +274,12 @@ are where quality comes from; Blinder keeps Claude Code *in* the loop, not out o
 restarts — the whole point is resumability. `feature_list.json` + `tasks.md` are
 canonical.
 
-**Does it work with other agent CLIs?** It's optimized for Claude Code (the
-discussion phase relies on its native question mechanism), but `AGENTS.md` and the
-role prompts are plain Markdown another tool can read.
+**Does it work with other agent CLIs?** Yes — **OpenCode** is a first-class target:
+`blinder init --agent opencode` (or `both`) generates its agent files, `opencode.json`,
+and a verify plugin from the same canonical role prompts. Model/effort tiering stays
+Claude-only (OpenCode is multi-provider and inherits your configured model). See
+[MANUAL §13](./MANUAL.md#13-multi-agent-targets-claude-code--opencode). Beyond those two,
+`AGENTS.md` and the role prompts are plain Markdown any tool can read.
 
 ## Prior art
 

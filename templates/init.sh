@@ -36,12 +36,37 @@ if [ -f "requirements.txt" ] || [ -f "pyproject.toml" ] || [ -f "setup.py" ] \
   HAS_PYTHON=true
 fi
 
+# Which agent front-end(s) this project targets (canonical state). Missing ⇒ claude
+# (covers projects scaffolded before multi-agent support). Drives the per-target checks.
+AGENTS="claude"
+[ -f blinder/.agents ] && AGENTS="$(cat blinder/.agents)"
+agent_has() { case " $AGENTS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+
 echo "── 1. Harness files ───────────────────────────────────"
-for f in AGENTS.md CLAUDE.md blinder/feature_list.json blinder/progress/current.md \
+# Shared, target-agnostic files (always present).
+for f in AGENTS.md blinder/feature_list.json blinder/progress/current.md \
          blinder/docs/architecture.md blinder/docs/conventions.md blinder/docs/specs.md \
-         blinder/docs/CHECKPOINTS.md; do
+         blinder/docs/leader.md blinder/docs/CHECKPOINTS.md; do
   if [ -f "$f" ]; then ok "exists $f"; else fail "missing $f"; EXIT_CODE=1; fi
 done
+# Per-target shell: CLAUDE.md is the Claude entrypoint (only required for that target).
+if agent_has claude; then
+  if [ -f CLAUDE.md ]; then ok "exists CLAUDE.md"; else fail "missing CLAUDE.md"; EXIT_CODE=1; fi
+fi
+# OpenCode shell: entrypoint config, verify plugin, and the transformed subagents.
+if agent_has opencode; then
+  # opencode.json is valid at root OR under .opencode/ (OpenCode checks both).
+  if [ -f opencode.json ] || [ -f .opencode/opencode.json ]; then
+    ok "exists opencode.json"
+  else
+    fail "missing opencode.json (expected at root or .opencode/opencode.json)"; EXIT_CODE=1
+  fi
+  for f in .opencode/plugins/blinder-verify.ts \
+           .opencode/agents/spec_author.md .opencode/agents/implementer.md \
+           .opencode/agents/reviewer.md; do
+    if [ -f "$f" ]; then ok "exists $f"; else fail "missing $f"; EXIT_CODE=1; fi
+  done
+fi
 
 echo ""
 echo "── 2. feature_list.json ───────────────────────────────"

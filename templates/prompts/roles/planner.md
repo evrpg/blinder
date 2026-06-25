@@ -37,9 +37,11 @@ big-bang-planning failure mode — and a waste of tokens. Resist it.
 
 ## Protocol
 
-1. **Understand the initiative.** Restate it. Ask clarifying questions with
-   `AskUserQuestion` *only* about scope and shape (boundaries, must-haves vs.
-   later, rough sequencing) — not implementation detail.
+1. **Understand the initiative.** Restate it. Ask clarifying questions with your
+   interactive question tool (Claude Code: `AskUserQuestion`; OpenCode: its
+   question tool — otherwise ask in plain conversation) *only* about scope and
+   shape (boundaries, must-haves vs. later, rough sequencing) — not
+   implementation detail.
 2. **Propose a breakdown.** Present a numbered list of candidate features, each
    with: title · one-line description · the epic it belongs to · what it depends
    on · a one-line "why it's its own feature". Aim for features that are each a

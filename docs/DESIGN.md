@@ -178,3 +178,47 @@ follow the spec or write the verdict — a CLI prompt **pointed at
 Code with zero runtime; Codex adds an external dependency (Node 18.18+, ChatGPT sub or
 OpenAI key). When the toggle is unset or `codex` isn't on PATH, the reviewer skips the
 pass silently — no behavior change, no new requirement for existing projects.
+
+## D16 — Multi-agent targets (Claude Code + OpenCode)
+
+One Blinder project can be driven by Claude Code, OpenCode, or both, selected at
+`init --agent claude|opencode|both` (default `claude`) and persisted in `blinder/.agents`
+(a missing file ⇒ `claude`, so every pre-existing project is unaffected). This **relaxes
+D2** ("Claude Code only") for a second concrete target without reopening the general
+multi-tool compilation that D2 rejected.
+
+**Why generate-from-one-source over fork-per-tool:** the CLI, verifier, state, specs/docs,
+and role-prompt *bodies* are already tool-agnostic; only the agent frontmatter, the verify
+hook, and the entrypoint doc differ. So we generate that thin shell per target and never
+duplicate the tree (a forked tree drifts). The Claude-style role prompts stay **canonical**;
+an `awk` emitter in `install_agents.sh` transforms them for OpenCode — dropping `name:`
+(OpenCode derives the id from the filename) and `model:`/`effort:`, injecting
+`mode: subagent`, and mapping the Claude `tools:` allowlist into a `permission:` block (the
+modern OpenCode field; `tools:` is deprecated). Leader instructions moved to a shared
+`blinder/docs/leader.md` that `CLAUDE.md` `@`-imports and `opencode.json` lists in
+`instructions` (OpenCode doesn't auto-follow Markdown refs, so it must be the config array).
+`AGENTS.md` stays the always-loaded shared map.
+
+**Why no model/effort/temperature on OpenCode:** OpenCode is multi-provider (the user may
+run OpenAI there), so pinning per-role models would hardcode provider slugs and drop
+`effort` regardless — instead OpenCode agents inherit the user's configured model (set in
+the project-owned `opencode.json`), which makes **model tiering (D7) a Claude-only feature
+for now** (documented, with a manual per-`.opencode/agents/*.md` override and a backlog path
+to map the implementer to OpenCode's `small_model`). This deletes the biggest implementation
+risk (a provider/model slug table).
+
+**Why graceful degradation for questions:** OpenCode's structured question tool isn't
+uniformly exposed, so the discussion/approval invariant is "ask the human before any spec,"
+satisfied by a structured question tool when present and plain conversation otherwise.
+
+**Verification hook parity:** the Claude `PostToolUse` hook and an OpenCode plugin
+(`.opencode/plugins/blinder-verify.ts`, `tool.execute.after`) both just run
+`bash blinder/init.sh` — the verifier's *content* stays in one place. The plugin needs the
+Bun runtime, but **OpenCode bundles it** (validated against OpenCode 1.17.9: the plugin
+loads with no separate `bun` install), so the Claude path's zero-runtime promise is
+preserved and OpenCode adds no extra system dependency beyond OpenCode itself.
+
+**`upgrade --agent` is union / add-only:** it can grow the target set but never silently
+delete a working shell; `opencode.json` is preserved on upgrade like `.claude/settings.json`
+(it's where the user sets their model). Removing/switching a target is a deliberate manual
+step (reversible via git); an explicit `--only`/`--replace` flag is deferred to the backlog.

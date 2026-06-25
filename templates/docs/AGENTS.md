@@ -32,6 +32,7 @@
 | `blinder/specs/<id>-<name>/review.md` | Reviewer verdict | After review |
 | `blinder/docs/architecture.md` | Project architecture | Before implementing |
 | `blinder/docs/conventions.md` | Coding & commit conventions | Before writing code |
+| `blinder/docs/leader.md` | Shared Leader orchestration body (classification, routing, gates, hard rules) | When acting as the Leader |
 | `blinder/docs/specs.md` | The SDD process (discussion → spec → TDD → review) | Before touching a spec |
 | `blinder/docs/CHECKPOINTS.md` | Objective done-criteria | During review |
 | `blinder/verify.env` | Project-owned build/test commands (`PROJECT_COMPILE_CMD`/`PROJECT_TEST_CMD`) | When you learn the real build/test command |
@@ -42,9 +43,9 @@
 
 | Role | Runs where | Does | Does NOT |
 |------|-----------|------|----------|
-| **leader** | main thread (`CLAUDE.md`) | Orchestrate; run planning/discussion/approval; dispatch subagents; update state | Write app code; skip gates |
+| **leader** | main thread (`blinder/docs/leader.md`) | Orchestrate; run planning/discussion/approval; dispatch subagents; update state | Write app code; skip gates |
 | **planner** | main thread | Split an initiative into features (thin); insert via `blinder/cli.sh new`; keep `roadmap.md` | Design or implement; lock per-feature detail |
-| **discussion** | main thread | Ask the human (`AskUserQuestion`); write `decisions.md` | Guess decisions |
+| **discussion** | main thread | Ask the human (interactive question tool — `AskUserQuestion` on Claude Code, else plain chat); write `decisions.md` | Guess decisions |
 | **spec_author** | subagent | Write requirements/design/tasks **and the failing test suite** from decisions | Write application code |
 | **implementer** | subagent | Make the pre-written tests pass, task by task | Edit tests; skip the spec; gold-plate |
 | **reviewer** | subagent | Audit code vs spec + harden tests + full suite | Edit feature code |
